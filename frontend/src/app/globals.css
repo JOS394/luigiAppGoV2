@@ -1,0 +1,59 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: luigi;
+}
+
+:root, [data-theme="luigi"] {
+  /* RESTAURACIÓN AL VERDE VIBRANTE ORIGINAL */
+  --color-primary: #46b128;
+  --color-primary-content: #ffffff;
+  
+  --color-secondary: #14532d;
+  --color-secondary-content: #ffffff;
+  
+  --color-accent: #dcfce7;
+  --color-accent-content: #14532d;
+  
+  /* NEUTRALIDAD */
+  --color-neutral: #1f2937;
+  --color-neutral-content: #ffffff;
+  
+  /* FONDOS BLANCOS LIMPIOS */
+  --color-base-100: #ffffff; 
+  --color-base-200: #f9fafb; 
+  --color-base-300: #f3f4f6;
+  
+  /* Variables internas DaisyUI restauradas */
+  --p: 104 63% 42%; 
+  --s: 145 63% 20%; 
+  --a: 142 70% 90%; 
+  --n: 215 28% 17%; 
+  
+  --b1: 1.00 0.00 0;
+  --b2: 210 20% 98%;
+  --b3: 210 20% 95%;
+  
+  --bc: 215 28% 17%;
+}
+
+body {
+  background-color: var(--color-base-200);
+  color: var(--color-neutral);
+  -webkit-font-smoothing: antialiased;
+}
+
+@theme {
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+}
+
+.btn {
+  text-transform: none;
+  font-weight: 600;
+}
+
+/* Scrollbar restaurado */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #46b128; }
