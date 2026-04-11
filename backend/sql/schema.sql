@@ -14,12 +14,15 @@ CREATE TABLE IF NOT EXISTS productos (
     id TEXT PRIMARY KEY,
     nombre TEXT NOT NULL,
     precio REAL NOT NULL,
+    costo REAL NOT NULL,
+    costo_unitario REAL NOT NULL,
     stock INTEGER NOT NULL,
     categoria TEXT,
     tipo TEXT CHECK(tipo IN ('producto', 'servicio')),
     codigo_barras TEXT UNIQUE,
     ubicacion TEXT,
     ubicacion_especifica TEXT,
+    imagen_url TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -64,4 +67,37 @@ CREATE TABLE IF NOT EXISTS movimientos_financieros (
     monto REAL NOT NULL,
     metodo_pago TEXT,
     descripcion TEXT
+);
+
+-- 7. Proveedores
+CREATE TABLE IF NOT EXISTS proveedores (
+    id TEXT PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    email TEXT,
+    telefono TEXT,
+    direccion TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 8. Compras a Proveedores
+CREATE TABLE IF NOT EXISTS compras (
+    id TEXT PRIMARY KEY,
+    fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+    proveedor_id TEXT,
+    total REAL NOT NULL,
+    metodo_pago TEXT,
+    FOREIGN KEY(proveedor_id) REFERENCES proveedores(id)
+);
+
+-- 9. Detalle de Compras
+CREATE TABLE IF NOT EXISTS compra_detalles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    compra_id TEXT,
+    producto_id TEXT,
+    cantidad INTEGER NOT NULL,
+    precio_unitario REAL NOT NULL,
+    precio_sugerido REAL NOT NULL,
+    subtotal REAL NOT NULL,
+    FOREIGN KEY(compra_id) REFERENCES compras(id),
+    FOREIGN KEY(producto_id) REFERENCES productos(id)
 );

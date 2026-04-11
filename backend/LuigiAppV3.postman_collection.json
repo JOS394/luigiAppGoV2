@@ -1,0 +1,81 @@
+{
+	"info": {
+		"_postman_id": "8f3d6b1a-7c2e-4a5b-9d1f-6e8c7a9b0d1e",
+		"name": "LuigiApp V3 Backend",
+		"description": "Colección para probar el backend de LuigiApp V3 (ERP/POS)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Productos",
+			"item": [
+				{
+					"name": "Listar Productos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/productos",
+							"host": ["{{base_url}}"],
+							"path": ["api", "productos"]
+						}
+					}
+				},
+				{
+					"name": "Crear Producto",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": \"P-001\",\n    \"nombre\": \"Coca Cola 600ml\",\n    \"precio\": 25.50,\n    \"costo\": 15.00,\n    \"costo_unitario\": 15.00,\n    \"stock\": 50,\n    \"tipo\": \"producto\",\n    \"codigo_barras\": \"7501055300075\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/productos",
+							"host": ["{{base_url}}"],
+							"path": ["api", "productos"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Compras",
+			"item": [
+				{
+					"name": "Registrar Compra",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": \"C-001\",\n    \"proveedor_id\": \"PR-001\",\n    \"total\": 1200.00,\n    \"metodo_pago\": \"Efectivo\",\n    \"detalles\": [\n        {\n            \"producto_id\": \"P-001\",\n            \"cantidad\": 100,\n            \"precio_unitario\": 12.00,\n            \"precio_sugerido\": 28.00,\n            \"subtotal\": 1200.00\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/compras",
+							"host": ["{{base_url}}"],
+							"path": ["api", "compras"]
+						}
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		}
+	]
+}
