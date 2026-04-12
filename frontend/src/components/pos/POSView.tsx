@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Producto } from '../../types';
 import { usePosStore } from '../../store/posStore';
+import { apiService } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import { ProductGrid } from './ProductGrid';
 import { CartItem } from './CartItem';
 import { 
@@ -16,15 +18,17 @@ import {
   Store,
   DollarSign,
   Percent,
-  X
+  X,
+  Users
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface POSViewProps {
   products: Producto[];
+  onSuccess?: () => void;
 }
 
-export const POSView: React.FC<POSViewProps> = ({ products }) => {
+export const POSView: React.FC<POSViewProps> = ({ products, onSuccess }) => {
   const { 
     cart, 
     discount,
@@ -40,6 +44,8 @@ export const POSView: React.FC<POSViewProps> = ({ products }) => {
   const [isPinned, setIsPinned] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
   const [animateCart, setAnimateCart] = useState(false);
+  const [clienteNombre, setClienteNombre] = useState('Cliente General');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
   const prevCountRef = useRef(cartCount);
@@ -57,10 +63,36 @@ export const POSView: React.FC<POSViewProps> = ({ products }) => {
     prevCountRef.current = cartCount;
   }, [cartCount]);
 
-  const handleCheckout = () => {
-    toast.success('Venta Luigi registrada');
-    clearCart();
-    setIsExpanded(false);
+  const handleCheckout = async () => {
+    if (cart.length === 0) return;
+    
+    setIsSubmitting(true);
+    try {
+      const ventaData = {
+        cliente: clienteNombre || 'Cliente General',
+        total: total,
+        estado: 'Completada' as const,
+        detalles: cart.map(item => ({
+          productoId: item.id,
+          cantidad: item.qty,
+          precioUnitario: item.precio,
+          subtotal: item.precio * item.qty
+        }))
+      };
+
+      await apiService.ventas.create(ventaData);
+      
+      toast.success('Venta registrada con éxito');
+      clearCart();
+      setClienteNombre('Cliente General');
+      setIsExpanded(false);
+      if (onSuccess) onSuccess();
+    } catch (error: any) {
+      console.error('Error al registrar venta:', error);
+      toast.error(error.message || 'Error al registrar la venta en el servidor');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -134,6 +166,21 @@ export const POSView: React.FC<POSViewProps> = ({ products }) => {
           </div>
         </div>
 
+        {/* Cliente Input */}
+        <div className="px-6 py-3 bg-slate-50/50 border-b border-slate-100 shrink-0">
+          <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">
+            <Users size={12} className="text-primary" />
+            <span>Cliente</span>
+          </div>
+          <input 
+            type="text" 
+            placeholder="Nombre del cliente..." 
+            className="input input-bordered input-sm w-full bg-white border-slate-200 focus:border-primary font-bold text-slate-700 rounded-xl h-10 px-4"
+            value={clienteNombre}
+            onChange={(e) => setClienteNombre(e.target.value)}
+          />
+        </div>
+
         {/* Lista de Items - FLEX-1 con MIN-H-0 para forzar scrollbar y no empujar el footer */}
         <div className="flex-1 overflow-y-auto px-4 py-2 custom-scrollbar min-h-0 bg-white">
           {cart.length === 0 ? (
@@ -182,8 +229,20 @@ export const POSView: React.FC<POSViewProps> = ({ products }) => {
           </div>
 
           <div className="flex gap-2">
-            <button onClick={clearCart} disabled={cart.length === 0} className="btn btn-square btn-outline border-slate-200 bg-white text-slate-300 hover:text-red-500 rounded-xl h-12 shadow-sm"><Trash2 size={18} /></button>
-            <button onClick={handleCheckout} disabled={cart.length === 0} className="btn btn-primary flex-1 rounded-xl shadow-lg shadow-primary/20 font-bold h-12 text-white uppercase tracking-widest text-xs"><CreditCard size={18} className="mr-2" /> REGISTRAR COBRO</button>
+            <button onClick={clearCart} disabled={cart.length === 0 || isSubmitting} className="btn btn-square btn-outline border-slate-200 bg-white text-slate-300 hover:text-red-500 rounded-xl h-12 shadow-sm"><Trash2 size={18} /></button>
+            <button 
+              onClick={handleCheckout} 
+              disabled={cart.length === 0 || isSubmitting} 
+              className="btn btn-primary flex-1 rounded-xl shadow-lg shadow-primary/20 font-bold h-12 text-white uppercase tracking-widest text-xs"
+            >
+              {isSubmitting ? (
+                <span className="loading loading-spinner loading-sm"></span>
+              ) : (
+                <>
+                  <CreditCard size={18} className="mr-2" /> REGISTRAR COBRO
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>

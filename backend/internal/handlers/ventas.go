@@ -19,6 +19,13 @@ func (h *VentaHandler) CreateVenta(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if v.ID == "" {
+		v.ID = "V-" + string(rune(1000+len(v.Cliente))) // Generador muy simple de respaldo
+	}
+	if v.Estado == "" {
+		v.Estado = "Completada"
+	}
+
 	tx, err := h.DB.Begin()
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "No se pudo iniciar la transacción")
@@ -78,4 +85,49 @@ func (h *VentaHandler) CreateVenta(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, http.StatusCreated, map[string]string{"message": "Venta registrada con éxito", "id": v.ID})
+}
+
+func (h *VentaHandler) GetVentas(w http.ResponseWriter, r *http.Request) {
+	rows, err := h.DB.Query(`SELECT id, cliente, total, estado, fecha, created_at, updated_at, deleted_at FROM ventas WHERE deleted_at IS NULL ORDER BY fecha DESC`)
+	if err != nil {
+		errorResponse(w, http.StatusInternalServerError, "Error al obtener ventas: "+err.Error())
+		return
+	}
+	defer rows.Close()
+
+	ventas := []models.Venta{}
+	for rows.Next() {
+		var v models.Venta
+		v.Detalle = []models.VentaDetalle{} // Inicializar como slice vacío en lugar de nil
+		if err := rows.Scan(&v.ID, &v.Cliente, &v.Total, &v.Estado, &v.Fecha, &v.CreatedAt, &v.UpdatedAt, &v.DeletedAt); err != nil {
+			errorResponse(w, http.StatusInternalServerError, "Error al escanear ventas: "+err.Error())
+			return
+		}
+
+		// Obtener detalles de la venta
+		detailRows, err := h.DB.Query(`SELECT id, producto_id, cantidad, precio_unitario, subtotal FROM venta_detalles WHERE venta_id = ?`, v.ID)
+		if err == nil {
+			for detailRows.Next() {
+				var d models.VentaDetalle
+				if err := detailRows.Scan(&d.ID, &d.ProductoID, &d.Cantidad, &d.PrecioUnitario, &d.Subtotal); err == nil {
+					v.Detalle = append(v.Detalle, d)
+				}
+			}
+			detailRows.Close() // Cerrar manualmente dentro del bucle
+		}
+
+		ventas = append(ventas, v)
+	}
+
+	jsonResponse(w, http.StatusOK, ventas)
+}
+
+func (h *VentaHandler) DeleteVenta(w http.ResponseWriter, r *http.Request) {
+	id := getID(r)
+	_, err := h.DB.Exec(`UPDATE ventas SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?`, id)
+	if err != nil {
+		errorResponse(w, http.StatusInternalServerError, "Error al eliminar venta: "+err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

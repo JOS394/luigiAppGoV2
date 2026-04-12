@@ -1,303 +1,416 @@
-import { 
-  MOCK_PRODUCTOS, MOCK_VENTAS, MOCK_REPORTE_RESUMEN, 
-  MOCK_CLIENTES, MOCK_MOVIMIENTOS, MOCK_RESUMEN_FINANCIERO,
-  MOCK_COMPRAS, MOCK_PROVEEDORES, MOCK_RESUMEN_COMPRAS
-} from '../data/mockData';
 import type { 
   Producto, Venta, ReporteResumen, Cliente, 
   MovimientoFinanciero, ResumenFinanciero,
   Compra, Proveedor, ResumenCompras,
-  MovimientoInventario, ResumenInventario
+  MovimientoInventario, ResumenInventario,
+  Usuario, ReporteDetallado
 } from '../types';
 
-const MOCK_MOVIMIENTOS_INV: MovimientoInventario[] = [];
+const BASE_URL = 'http://localhost:8080/api';
 
-const USE_MOCKS = true;
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const fetcher = async (endpoint: string, options?: RequestInit) => {
+  // Asegurar que el endpoint no empiece con / si BASE_URL ya lo tiene o viceversa
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = `${BASE_URL}${cleanEndpoint}`;
+  
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  
+  console.log(`[API] Fetching ${url}`, { 
+    method: options?.method || 'GET',
+    hasToken: !!token 
+  });
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        ...options?.headers,
+      },
+    });
 
-const MOCK_USUARIOS: Usuario[] = [
-  { id: 'U-1', nombre: 'Luigi Admin', email: 'admin@luigiapp.com', rol: 'administrador', estado: 'Activo', fechaRegistro: '2026-01-01' },
-  { id: 'U-2', nombre: 'Carlos Vendedor', email: 'carlos@luigiapp.com', rol: 'vendedor', estado: 'Activo', fechaRegistro: '2026-03-15' },
-];
+    if (response.status === 401) {
+      console.warn(`[API] 401 Unauthorized at ${cleanEndpoint}. Clearing session.`);
+      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_data');
+        window.location.href = '/login';
+      }
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error(`[API] Error ${response.status} in ${cleanEndpoint}:`, errorData);
+      throw new Error(errorData.error || errorData.message || `Error ${response.status}: ${response.statusText}`);
+    }
+
+    if (response.status === 204) return null;
+    const data = await response.json();
+    console.log(`[API] Success ${cleanEndpoint}:`, data);
+    return data;
+  } catch (err: any) {
+    console.error(`[API] Fatal error in ${cleanEndpoint}:`, err);
+    throw err;
+  }
+};
+
+// Mapeadores para convertir entre Backend (snake_case) y Frontend (camelCase)
+const mapProductoFromBackend = (p: any): Producto => {
+  return {
+    id: p.id,
+    nombre: p.nombre,
+    precio: p.precio,
+    stock: p.stock,
+    categoria: p.categoria || 'General',
+    tipo: p.tipo as 'producto' | 'servicio',
+    codigoBarras: p.codigo_barras,
+    imagen: p.imagen_url ? (p.imagen_url.startsWith('http') ? p.imagen_url : `http://localhost:8080${p.imagen_url}`) : undefined,
+    ubicacion: p.ubicacion,
+    ubicacionEspecifica: p.ubicacion_especifica,
+    createdAt: p.created_at,
+    updatedAt: p.updated_at,
+  };
+};
+
+const mapProductoToBackend = (p: any) => ({
+  id: p.id,
+  nombre: p.nombre,
+  precio: p.precio,
+  costo: p.costo || 0,
+  costo_unitario: p.costoUnitario || 0,
+  stock: p.stock,
+  categoria: p.categoria,
+  tipo: p.tipo,
+  codigo_barras: p.codigoBarras,
+  ubicacion: p.ubicacion,
+  ubicacion_especifica: p.ubicacionEspecifica,
+});
+
+const mapVentaFromBackend = (v: any): Venta => ({
+  id: v.id,
+  fecha: v.fecha,
+  cliente: v.cliente,
+  total: v.total,
+  estado: v.estado as any,
+  createdAt: v.created_at,
+  updatedAt: v.updated_at,
+  detalles: (v.detalle || []).map((d: any) => ({
+    productoId: d.producto_id,
+    cantidad: d.cantidad,
+    precioUnitario: d.precio_unitario,
+    subtotal: d.subtotal,
+  })),
+});
+
+const mapMovimientoFromBackend = (m: any): MovimientoFinanciero => ({
+  id: m.id.toString(),
+  fecha: m.fecha,
+  tipo: m.tipo as 'Ingreso' | 'Egreso',
+  categoria: m.categoria as any,
+  monto: m.monto,
+  metodoPago: m.metodo_pago as any,
+  descripcion: m.descripcion,
+});
+
+const mapProveedorFromBackend = (p: any): Proveedor => ({
+  id: p.id,
+  nombre: p.nombre,
+  contacto: p.email,
+  telefono: p.telefono,
+  direccion: p.direccion,
+  categoria: 'Proveedor',
+});
+
+const mapCompraFromBackend = (c: any): Compra => ({
+  id: c.id,
+  fecha: c.fecha,
+  proveedorId: c.proveedor_id,
+  proveedorNombre: `Proveedor ${c.proveedor_id}`,
+  total: c.total,
+  estado: 'Completada',
+  metodoPago: c.metodo_pago as any,
+  detalles: (c.detalles || []).map((d: any) => ({
+    productoId: d.producto_id,
+    productoNombre: `Producto ${d.producto_id}`,
+    cantidad: d.cantidad,
+    costoUnitario: d.precio_unitario,
+    subtotal: d.subtotal,
+  })),
+});
+
+const mapClienteFromBackend = (c: any): Cliente => ({
+  id: c.id,
+  nombre: c.nombre,
+  email: c.email,
+  telefono: c.telefono,
+  direccion: c.direccion,
+  notas: c.notas,
+  totalCompras: c.total_compras || 0,
+  ultimaVisita: c.ultima_visita,
+  createdAt: c.created_at,
+  updatedAt: c.updated_at,
+});
 
 export const apiService = {
+  auth: {
+    login: async (credentials: any): Promise<any> => {
+      const data = await fetcher('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(credentials),
+      });
+      if (typeof window !== 'undefined' && data.token) {
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('user_data', JSON.stringify(data.usuario));
+      }
+      return data;
+    },
+    register: async (userData: any): Promise<any> => {
+      return await fetcher('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(userData),
+      });
+    },
+    logout: () => {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_data');
+        window.location.href = '/login';
+      }
+    },
+    getCurrentUser: () => {
+      if (typeof window !== 'undefined') {
+        const data = localStorage.getItem('user_data');
+        return data ? JSON.parse(data) : null;
+      }
+      return null;
+    }
+  },
   usuarios: {
     getAll: async (): Promise<Usuario[]> => {
-      await delay(500);
-      return [...MOCK_USUARIOS];
-    },
-    create: async (data: Omit<Usuario, 'id' | 'fechaRegistro'>): Promise<Usuario> => {
-      await delay(800);
-      const nuevo: Usuario = {
-        ...data,
-        id: `U-${Math.floor(Math.random() * 1000)}`,
-        fechaRegistro: new Date().toISOString().split('T')[0]
-      };
-      MOCK_USUARIOS.push(nuevo);
-      return nuevo;
-    },
-    update: async (id: string, data: Partial<Usuario>): Promise<Usuario> => {
-      await delay(500);
-      const index = MOCK_USUARIOS.findIndex(u => u.id === id);
-      if (index !== -1) {
-        MOCK_USUARIOS[index] = { ...MOCK_USUARIOS[index], ...data };
-        return MOCK_USUARIOS[index];
-      }
-      throw new Error("Usuario no encontrado");
+      return [
+        { id: 'U-1', nombre: 'Luigi Admin', email: 'admin@luigiapp.com', rol: 'administrador', estado: 'Activo', fechaRegistro: '2026-01-01' },
+      ];
     }
   },
   inventario: {
     getResumen: async (): Promise<ResumenInventario> => {
-      await delay(400);
-      const items = MOCK_PRODUCTOS.filter(p => p.tipo === 'producto');
+      const data = await fetcher('/productos/valor-inventario');
       return {
-        valorTotal: items.reduce((acc, p) => acc + (p.precio * p.stock), 0),
-        itemsTotales: items.length,
-        sinStock: items.filter(p => p.stock === 0).length
+        valorTotal: data.valor_total || 0,
+        itemsTotales: 0,
+        sinStock: 0
       };
     },
-    getMovimientosByProducto: async (productoId: string): Promise<MovimientoInventario[]> => {
-      await delay(500);
-      return MOCK_MOVIMIENTOS_INV.filter(m => m.productoId === productoId);
-    },
     ajustarStock: async (data: { productoId: string, cantidad: number, tipo: 'Entrada' | 'Salida', motivo: string }): Promise<void> => {
-      await delay(800);
-      const prod = MOCK_PRODUCTOS.find(p => p.id === data.productoId);
-      if (!prod) throw new Error("Producto no encontrado");
-
-      const stockPrevio = prod.stock;
-      const cambio = data.tipo === 'Entrada' ? data.cantidad : -data.cantidad;
-      const stockNuevo = stockPrevio + cambio;
-
-      if (stockNuevo < 0) throw new Error("El stock no puede ser negativo");
-
-      prod.stock = stockNuevo;
-
-      MOCK_MOVIMIENTOS_INV.unshift({
-        id: `INV-${Math.floor(Math.random() * 10000)}`,
-        productoId: prod.id,
-        productoNombre: prod.nombre,
-        tipo: data.tipo === 'Entrada' ? 'Entrada' : 'Salida',
-        cantidad: data.cantidad,
-        motivo: data.motivo,
-        fecha: new Date().toISOString(),
-        stockPrevio,
-        stockNuevo
+      if (!data.productoId) throw new Error("ID del producto es requerido");
+      await fetcher(`/productos/${data.productoId}/stock`, {
+        method: 'POST',
+        body: JSON.stringify({
+          cantidad: data.cantidad,
+          tipo: data.tipo,
+          motivo: data.motivo,
+        }),
       });
     }
   },
   compras: {
     getAll: async (): Promise<Compra[]> => {
-      if (USE_MOCKS) { await delay(500); return [...MOCK_COMPRAS]; }
-      return [];
+      const data = await fetcher('/compras');
+      return (data || []).map(mapCompraFromBackend);
     },
     getResumen: async (): Promise<ResumenCompras> => {
-      if (USE_MOCKS) { await delay(400); return { ...MOCK_RESUMEN_COMPRAS }; }
       return { totalMes: 0, comprasPendientes: 0, proveedoresActivos: 0 };
     },
-    create: async (compra: Omit<Compra, 'id' | 'fecha'>): Promise<Compra> => {
-      await delay(800);
-      const nuevaCompra: Compra = {
-        ...compra,
-        id: `B-${Math.floor(Math.random() * 1000)}`,
-        fecha: new Date().toISOString()
+    create: async (compra: any): Promise<Compra> => {
+      const body = {
+        id: `C-${Math.floor(Math.random() * 10000)}`,
+        proveedor_id: compra.proveedorId,
+        total: compra.total,
+        metodo_pago: compra.metodoPago,
+        detalles: compra.detalles.map((d: any) => ({
+          producto_id: d.productoId,
+          cantidad: d.cantidad,
+          precio_unitario: d.costoUnitario,
+          precio_sugerido: d.precioSugerido || (d.costoUnitario * 1.3),
+          subtotal: d.subtotal
+        }))
       };
-      if (USE_MOCKS) {
-        MOCK_COMPRAS.unshift(nuevaCompra);
-      }
-      return nuevaCompra;
+      const res = await fetcher('/compras', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+      return mapCompraFromBackend(res);
     },
-    updateStatus: async (id: string, estado: Compra['estado']): Promise<Compra> => {
-      await delay(500);
-      const index = MOCK_COMPRAS.findIndex(c => c.id === id);
-      if (index !== -1) {
-        MOCK_COMPRAS[index].estado = estado;
-        return MOCK_COMPRAS[index];
-      }
-      throw new Error("Compra no encontrada");
-    }
   },
   proveedores: {
     getAll: async (): Promise<Proveedor[]> => {
-      if (USE_MOCKS) { await delay(500); return [...MOCK_PROVEEDORES]; }
-      return [];
+      const data = await fetcher('/proveedores');
+      return (data || []).map(mapProveedorFromBackend);
     },
     create: async (proveedor: Omit<Proveedor, 'id'>): Promise<Proveedor> => {
-      await delay(800);
-      const nuevo: Proveedor = {
-        ...proveedor,
-        id: `PR-${Math.floor(Math.random() * 1000)}`
+      const body = {
+        nombre: proveedor.nombre,
+        email: proveedor.contacto,
+        telefono: proveedor.telefono,
+        direccion: proveedor.direccion,
       };
-      if (USE_MOCKS) { MOCK_PROVEEDORES.unshift(nuevo); }
-      return nuevo;
+      const res = await fetcher('/proveedores', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+      return mapProveedorFromBackend(res);
     },
     update: async (id: string, data: Partial<Proveedor>): Promise<Proveedor> => {
-      await delay(500);
-      const index = MOCK_PROVEEDORES.findIndex(p => p.id === id);
-      if (index !== -1) {
-        MOCK_PROVEEDORES[index] = { ...MOCK_PROVEEDORES[index], ...data };
-        return MOCK_PROVEEDORES[index];
-      }
-      throw new Error("Proveedor no encontrado");
+      const body = {
+        nombre: data.nombre,
+        email: data.contacto,
+        telefono: data.telefono,
+        direccion: data.direccion,
+      };
+      const res = await fetcher(`/proveedores/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      });
+      return mapProveedorFromBackend(res);
     },
     delete: async (id: string): Promise<void> => {
-      await delay(500);
-      const index = MOCK_PROVEEDORES.findIndex(p => p.id === id);
-      if (index !== -1) { MOCK_PROVEEDORES.splice(index, 1); }
+      await fetcher(`/proveedores/${id}`, { method: 'DELETE' });
     }
   },
   ventas: {
     getAll: async (): Promise<Venta[]> => {
-      if (USE_MOCKS) { await delay(500); return [...MOCK_VENTAS]; }
-      return [];
+      const data = await fetcher('/ventas');
+      return (data || []).map(mapVentaFromBackend);
     },
-    create: async (venta: Omit<Venta, 'id'>): Promise<Venta> => {
-      await delay(800);
-      const newVenta = { ...venta, id: `V-${Math.floor(Math.random() * 1000)}` };
-      if (USE_MOCKS) { MOCK_VENTAS.unshift(newVenta as Venta); }
-      return newVenta as Venta;
+    create: async (venta: Omit<Venta, 'id' | 'fecha'>): Promise<Venta> => {
+      const body = {
+        id: `V-${Math.floor(Math.random() * 10000)}`,
+        cliente: venta.cliente,
+        total: venta.total,
+        estado: venta.estado || 'Completada',
+        detalle: venta.detalles.map(d => ({
+          producto_id: d.productoId,
+          cantidad: d.cantidad,
+          precio_unitario: d.precioUnitario,
+          subtotal: d.subtotal,
+        })),
+      };
+      await fetcher('/ventas', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+      return { ...venta, id: body.id, fecha: new Date().toISOString() } as Venta;
     }
   },
   productos: {
     getAll: async (): Promise<Producto[]> => {
-      if (USE_MOCKS) { await delay(500); return [...MOCK_PRODUCTOS]; }
-      return [];
+      const data = await fetcher('/productos');
+      return (data || []).map(mapProductoFromBackend);
     },
     create: async (producto: Omit<Producto, 'id'>): Promise<Producto> => {
-      await delay(800);
-      const nuevo: Producto = {
-        ...producto,
-        id: `P-${Math.floor(Math.random() * 1000)}`
-      };
-      if (USE_MOCKS) {
-        MOCK_PRODUCTOS.unshift(nuevo);
-      }
-      return nuevo;
+      const res = await fetcher('/productos', {
+        method: 'POST',
+        body: JSON.stringify(mapProductoToBackend(producto)),
+      });
+      return mapProductoFromBackend(res);
     },
     update: async (id: string, data: Partial<Producto>): Promise<Producto> => {
-      await delay(500);
-      const index = MOCK_PRODUCTOS.findIndex(p => p.id === id);
-      if (index !== -1) {
-        MOCK_PRODUCTOS[index] = { ...MOCK_PRODUCTOS[index], ...data };
-        return MOCK_PRODUCTOS[index];
-      }
-      throw new Error("Producto no encontrado");
+      const res = await fetcher(`/productos/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(mapProductoToBackend(data)),
+      });
+      return mapProductoFromBackend(res);
     },
     delete: async (id: string): Promise<void> => {
-      await delay(500);
-      const index = MOCK_PRODUCTOS.findIndex(p => p.id === id);
-      if (index !== -1) {
-        MOCK_PRODUCTOS.splice(index, 1);
-      }
+      await fetcher(`/productos/${id}`, { method: 'DELETE' });
     },
-    updateStock: async (id: string, newStock: number): Promise<void> => {
-      await delay(300);
-      if (USE_MOCKS) {
-        const prod = MOCK_PRODUCTOS.find(p => p.id === id);
-        if (prod) prod.stock = newStock;
-      }
+  },
+  clientes: {
+    getAll: async (): Promise<Cliente[]> => {
+      const data = await fetcher('/clientes');
+      return (data || []).map(mapClienteFromBackend);
+    },
+    create: async (cliente: Omit<Cliente, 'id' | 'totalCompras' | 'ultimaVisita'>): Promise<Cliente> => {
+      const body = {
+        nombre: cliente.nombre,
+        email: cliente.email,
+        telefono: cliente.telefono,
+        direccion: cliente.direccion,
+        notas: cliente.notas,
+      };
+      const res = await fetcher('/clientes', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+      return mapClienteFromBackend(res);
+    },
+    update: async (id: string, data: Partial<Cliente>): Promise<Cliente> => {
+      const body = {
+        nombre: data.nombre,
+        email: data.email,
+        telefono: data.telefono,
+        direccion: data.direccion,
+        notas: data.notas,
+      };
+      await fetcher(`/clientes/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      });
+      return { ...data, id } as Cliente;
+    },
+    delete: async (id: string): Promise<void> => {
+      await fetcher(`/clientes/${id}`, { method: 'DELETE' });
     }
   },
   reportes: {
     getResumen: async (): Promise<ReporteResumen> => {
-      await delay(600);
+      const data = await fetcher('/reportes/resumen');
       return { 
-        ventasHoy: 8450.50, 
-        ticketsPromedio: 215.25, 
-        transaccionesTotales: 38, 
-        crecimiento: 15.4,
-        utilidadBruta: 3240.00,
-        proyeccionMes: 45000.00
+        ventasHoy: data.ingresos || 0, 
+        ticketsPromedio: 0, 
+        transaccionesTotales: 0, 
+        crecimiento: 0,
+        utilidadBruta: data.balance || 0,
+        proyeccionMes: (data.ingresos || 0) * 30
       };
     },
     getDetallado: async (periodo: string): Promise<ReporteDetallado> => {
-      await delay(800);
       return {
-        topProductos: [
-          { id: '1', nombre: 'Cuaderno Profesional', valor: 4500, cantidad: 120, porcentaje: 25 },
-          { id: '2', nombre: 'Impresión Laser Color', valor: 3200, cantidad: 850, porcentaje: 18 },
-          { id: '3', nombre: 'Kit Escolar Básico', valor: 2800, cantidad: 45, porcentaje: 15 },
-          { id: '4', nombre: 'Memoria USB 64GB', valor: 1500, cantidad: 12, porcentaje: 8 },
-        ],
-        topCategorias: [
-          { id: 'c1', nombre: 'Papelería', valor: 12000, cantidad: 0, porcentaje: 45 },
-          { id: 'c2', nombre: 'Servicios Digitales', valor: 8500, cantidad: 0, porcentaje: 32 },
-          { id: 'c3', nombre: 'Tecnología', valor: 6000, cantidad: 0, porcentaje: 23 },
-        ],
-        ventasSemanales: [
-          { dia: 'Lun', monto: 1200 },
-          { dia: 'Mar', monto: 1900 },
-          { dia: 'Mie', monto: 1500 },
-          { dia: 'Jue', monto: 2100 },
-          { dia: 'Vie', monto: 2800 },
-          { dia: 'Sab', monto: 3500 },
-          { dia: 'Dom', monto: 800 },
-        ]
+        topProductos: [],
+        topCategorias: [],
+        ventasSemanales: []
       };
-    }
-  },
-  clientes: {
-    getAll: async (): Promise<Cliente[]> => {
-      if (USE_MOCKS) { await delay(500); return [...MOCK_CLIENTES]; }
-      return [];
-    },
-    create: async (cliente: Omit<Cliente, 'id' | 'totalCompras' | 'ultimaVisita'>): Promise<Cliente> => {
-      await delay(800);
-      const newCliente: Cliente = { 
-        ...cliente, 
-        id: `C-${Math.floor(Math.random() * 1000)}`,
-        totalCompras: 0,
-        ultimaVisita: new Date().toISOString()
-      };
-      if (USE_MOCKS) { MOCK_CLIENTES.unshift(newCliente); }
-      return newCliente;
-    },
-    update: async (id: string, data: Partial<Cliente>): Promise<Cliente> => {
-      await delay(500);
-      const index = MOCK_CLIENTES.findIndex(c => c.id === id);
-      if (index !== -1) {
-        MOCK_CLIENTES[index] = { ...MOCK_CLIENTES[index], ...data };
-        return MOCK_CLIENTES[index];
-      }
-      throw new Error("Cliente no encontrado");
-    },
-    delete: async (id: string): Promise<void> => {
-      await delay(500);
-      const index = MOCK_CLIENTES.findIndex(c => c.id === id);
-      if (index !== -1) {
-        MOCK_CLIENTES.splice(index, 1);
-      }
     }
   },
   finanzas: {
     getResumen: async (): Promise<ResumenFinanciero> => {
-      if (USE_MOCKS) { await delay(600); return { ...MOCK_RESUMEN_FINANCIERO }; }
-      return { balanceTotal: 0, ingresosMes: 0, egresosMes: 0, efectivoEnCaja: 0 };
+      const data = await fetcher('/reportes/resumen');
+      return {
+        balanceTotal: data.balance || 0,
+        ingresosMes: data.ingresos || 0,
+        egresosMes: data.egresos || 0,
+        efectivoEnCaja: data.balance || 0,
+      };
     },
     getMovimientos: async (): Promise<MovimientoFinanciero[]> => {
-      if (USE_MOCKS) { await delay(500); return [...MOCK_MOVIMIENTOS]; }
-      return [];
+      const data = await fetcher('/finanzas/movimientos');
+      return (data || []).map(mapMovimientoFromBackend);
     },
     createMovimiento: async (movimiento: Omit<MovimientoFinanciero, 'id' | 'fecha'>): Promise<MovimientoFinanciero> => {
-      await delay(800);
-      const nuevoMovimiento: MovimientoFinanciero = {
-        ...movimiento,
-        id: `M-${Math.floor(Math.random() * 1000)}`,
-        fecha: new Date().toISOString()
+      const body = {
+        tipo: movimiento.tipo,
+        categoria: movimiento.categoria,
+        monto: movimiento.monto,
+        metodo_pago: movimiento.metodoPago,
+        descripcion: movimiento.descripcion,
       };
-      if (USE_MOCKS) {
-        MOCK_MOVIMIENTOS.unshift(nuevoMovimiento);
-        if (movimiento.tipo === 'Ingreso') {
-          MOCK_RESUMEN_FINANCIERO.balanceTotal += movimiento.monto;
-          MOCK_RESUMEN_FINANCIERO.ingresosMes += movimiento.monto;
-          if (movimiento.metodoPago === 'Efectivo') MOCK_RESUMEN_FINANCIERO.efectivoEnCaja += movimiento.monto;
-        } else {
-          MOCK_RESUMEN_FINANCIERO.balanceTotal -= movimiento.monto;
-          MOCK_RESUMEN_FINANCIERO.egresosMes += movimiento.monto;
-          if (movimiento.metodoPago === 'Efectivo') MOCK_RESUMEN_FINANCIERO.efectivoEnCaja -= movimiento.monto;
-        }
-      }
-      return nuevoMovimiento;
+      const res = await fetcher('/finanzas/movimientos', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+      return mapMovimientoFromBackend(res);
     }
   }
 };

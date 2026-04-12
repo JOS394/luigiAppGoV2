@@ -7,4 +7,6 @@ type Proveedor struct {
 	Telefono  string `json:"telefono"`
 	Direccion string `json:"direccion"`
 	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+	DeletedAt *string `json:"deleted_at"`
 }

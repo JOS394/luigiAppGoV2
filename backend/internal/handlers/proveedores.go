@@ -13,17 +13,17 @@ type ProviderHandler struct {
 }
 
 func (h *ProviderHandler) GetProveedores(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.DB.Query(`SELECT id, nombre, email, telefono, direccion, created_at FROM proveedores`)
+	rows, err := h.DB.Query(`SELECT id, nombre, email, telefono, direccion, created_at, updated_at FROM proveedores WHERE deleted_at IS NULL`)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al consultar proveedores: "+err.Error())
 		return
 	}
 	defer rows.Close()
 
-	var proveedores []models.Proveedor
+	proveedores := []models.Proveedor{}
 	for rows.Next() {
 		var p models.Proveedor
-		err := rows.Scan(&p.ID, &p.Nombre, &p.Email, &p.Telefono, &p.Direccion, &p.CreatedAt)
+		err := rows.Scan(&p.ID, &p.Nombre, &p.Email, &p.Telefono, &p.Direccion, &p.CreatedAt, &p.UpdatedAt)
 		if err != nil {
 			errorResponse(w, http.StatusInternalServerError, "Error al leer fila: "+err.Error())
 			return
@@ -51,14 +51,14 @@ func (h *ProviderHandler) CreateProveedor(w http.ResponseWriter, r *http.Request
 }
 
 func (h *ProviderHandler) UpdateProveedor(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
+	id := getID(r)
 	var p models.Proveedor
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
 		errorResponse(w, http.StatusBadRequest, "JSON inválido")
 		return
 	}
 
-	_, err := h.DB.Exec(`UPDATE proveedores SET nombre = ?, email = ?, telefono = ?, direccion = ? WHERE id = ?`,
+	_, err := h.DB.Exec(`UPDATE proveedores SET nombre = ?, email = ?, telefono = ?, direccion = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL`,
 		p.Nombre, p.Email, p.Telefono, p.Direccion, id)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al actualizar proveedor: "+err.Error())
@@ -69,8 +69,8 @@ func (h *ProviderHandler) UpdateProveedor(w http.ResponseWriter, r *http.Request
 }
 
 func (h *ProviderHandler) DeleteProveedor(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	_, err := h.DB.Exec(`DELETE FROM proveedores WHERE id = ?`, id)
+	id := getID(r)
+	_, err := h.DB.Exec(`UPDATE proveedores SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?`, id)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al eliminar proveedor: "+err.Error())
 		return

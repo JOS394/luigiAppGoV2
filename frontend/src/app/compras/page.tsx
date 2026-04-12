@@ -7,6 +7,7 @@ import {
   Search, ShoppingCart, Filter, Download
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ProtectedRoute } from '@/components/shared/ProtectedRoute';
 
 // Componentes extraídos
 import { PurchaseStats } from '@/components/compras/PurchaseStats';
@@ -158,84 +159,86 @@ export default function ComprasPage() {
   const isFiltered = filters.startDate || filters.endDate || filters.estado !== 'Todos' || filters.metodoPago !== 'Todos';
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      <PurchaseStats resumen={resumen} />
+    <ProtectedRoute allowedRoles={['administrador']}>
+      <div className="space-y-8 animate-in fade-in duration-700">
+        <PurchaseStats resumen={resumen} />
 
-      {/* Barra de Acciones */}
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:max-w-3xl">
-          <div className="relative group w-full">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary transition-colors" size={18} />
-            <input 
-              type="text" 
-              placeholder="Buscar por proveedor u orden..." 
-              className="input input-bordered w-full pl-11 bg-white border-slate-200 rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all text-sm font-medium h-12"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        {/* Barra de Acciones */}
+        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:max-w-3xl">
+            <div className="relative group w-full">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary transition-colors" size={18} />
+              <input 
+                type="text" 
+                placeholder="Buscar por proveedor u orden..." 
+                className="input input-bordered w-full pl-11 bg-white border-slate-200 rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all text-sm font-medium h-12"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <button 
+              onClick={() => setShowFilterModal(true)}
+              className={`btn bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl h-12 gap-2 px-6 shadow-sm border-none ${isFiltered ? 'ring-2 ring-primary bg-primary/5' : ''}`}
+            >
+              <Filter size={18} className="text-primary" />
+              <span className="text-xs font-bold uppercase tracking-wider">Filtros</span>
+            </button>
           </div>
-          <button 
-            onClick={() => setShowFilterModal(true)}
-            className={`btn bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl h-12 gap-2 px-6 shadow-sm border-none ${isFiltered ? 'ring-2 ring-primary bg-primary/5' : ''}`}
-          >
-            <Filter size={18} className="text-primary" />
-            <span className="text-xs font-bold uppercase tracking-wider">Filtros</span>
-          </button>
+
+          <div className="flex items-center gap-3 w-full xl:w-auto">
+            <button 
+              onClick={() => setShowExportModal(true)}
+              className="btn btn-ghost btn-sm h-12 px-6 text-slate-500 hover:text-primary gap-2 bg-white border border-slate-100 rounded-xl shadow-sm"
+            >
+              <Download size={18} />
+              <span className="text-[10px] font-bold uppercase tracking-wider">Reporte</span>
+            </button>
+            <button 
+              onClick={() => setShowPurchaseModal(true)}
+              className="btn btn-primary shadow-lg shadow-primary/20 rounded-xl px-8 h-12 gap-2 shrink-0 text-white font-bold"
+            >
+              <ShoppingCart size={18} />
+              <span className="text-xs font-bold uppercase tracking-wider">Nueva Compra</span>
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full xl:w-auto">
-          <button 
-            onClick={() => setShowExportModal(true)}
-            className="btn btn-ghost btn-sm h-12 px-6 text-slate-500 hover:text-primary gap-2 bg-white border border-slate-100 rounded-xl shadow-sm"
-          >
-            <Download size={18} />
-            <span className="text-[10px] font-bold uppercase tracking-wider">Reporte</span>
-          </button>
-          <button 
-            onClick={() => setShowPurchaseModal(true)}
-            className="btn btn-primary shadow-lg shadow-primary/20 rounded-xl px-8 h-12 gap-2 shrink-0 text-white font-bold"
-          >
-            <ShoppingCart size={18} />
-            <span className="text-xs font-bold uppercase tracking-wider">Nueva Compra</span>
-          </button>
-        </div>
+        <PurchaseTable 
+          compras={filtered}
+          onOpenDetail={openDetail}
+          onUpdateStatus={handleUpdateStatus}
+        />
+
+        <PurchaseModal 
+          show={showPurchaseModal}
+          onClose={() => setShowPurchaseModal(false)}
+          onSubmit={handleCreatePurchase}
+          proveedores={proveedores}
+          productos={productos}
+          onRefreshProducts={fetchData}
+        />
+
+        <PurchaseDetailModal 
+          show={showDetailModal}
+          onClose={() => setShowDetailModal(false)}
+          compra={selectedCompra}
+          onUpdateStatus={handleUpdateStatus}
+        />
+
+        <PurchaseFilterModal 
+          show={showFilterModal}
+          onClose={() => setShowFilterModal(false)}
+          filters={filters}
+          setFilters={setFilters}
+          onClear={clearFilters}
+        />
+
+        <ExportModal 
+          show={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          onExport={handleExport}
+        />
       </div>
-
-      <PurchaseTable 
-        compras={filtered}
-        onOpenDetail={openDetail}
-        onUpdateStatus={handleUpdateStatus}
-      />
-
-      <PurchaseModal 
-        show={showPurchaseModal}
-        onClose={() => setShowPurchaseModal(false)}
-        onSubmit={handleCreatePurchase}
-        proveedores={proveedores}
-        productos={productos}
-        onRefreshProducts={fetchData}
-      />
-
-      <PurchaseDetailModal 
-        show={showDetailModal}
-        onClose={() => setShowDetailModal(false)}
-        compra={selectedCompra}
-        onUpdateStatus={handleUpdateStatus}
-      />
-
-      <PurchaseFilterModal 
-        show={showFilterModal}
-        onClose={() => setShowFilterModal(false)}
-        filters={filters}
-        setFilters={setFilters}
-        onClear={clearFilters}
-      />
-
-      <ExportModal 
-        show={showExportModal}
-        onClose={() => setShowExportModal(false)}
-        onExport={handleExport}
-      />
-    </div>
+    </ProtectedRoute>
   );
 }

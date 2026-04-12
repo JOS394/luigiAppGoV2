@@ -3,7 +3,6 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -22,7 +21,7 @@ func (h *FinanceHandler) GetMovimientos(w http.ResponseWriter, r *http.Request) 
 	}
 	defer rows.Close()
 
-	var movimientos []models.MovimientoFinanciero
+	movimientos := []models.MovimientoFinanciero{}
 	for rows.Next() {
 		var m models.MovimientoFinanciero
 		err := rows.Scan(&m.ID, &m.Fecha, &m.Tipo, &m.Categoria, &m.Monto, &m.MetodoPago, &m.Descripcion)
@@ -53,7 +52,7 @@ func (h *FinanceHandler) CreateMovimiento(w http.ResponseWriter, r *http.Request
 }
 
 func (h *FinanceHandler) UpdateMovimiento(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
+	id := getID(r)
 	var m models.MovimientoFinanciero
 	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
 		errorResponse(w, http.StatusBadRequest, "JSON inválido")
@@ -71,7 +70,7 @@ func (h *FinanceHandler) UpdateMovimiento(w http.ResponseWriter, r *http.Request
 }
 
 func (h *FinanceHandler) DeleteMovimiento(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
+	id := getID(r)
 	_, err := h.DB.Exec(`DELETE FROM movimientos_financieros WHERE id = ?`, id)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al eliminar movimiento: "+err.Error())
@@ -83,20 +82,17 @@ func (h *FinanceHandler) DeleteMovimiento(w http.ResponseWriter, r *http.Request
 
 
 func (h *FinanceHandler) GetResumen(w http.ResponseWriter, r *http.Request) {
-	now := time.Now()
-	month := fmt.Sprintf("%04d-%02d%%", now.Year(), now.Month())
-
 	query := `
 		SELECT 
 			COALESCE(SUM(CASE WHEN tipo = 'Ingreso' THEN monto ELSE 0 END), 0) as ingresos,
 			COALESCE(SUM(CASE WHEN tipo = 'Egreso' THEN monto ELSE 0 END), 0) as egresos
 		FROM movimientos_financieros
-		WHERE fecha LIKE ?
+		WHERE deleted_at IS NULL
 	`
 	var ingresos, egresos float64
-	err := h.DB.QueryRow(query, month).Scan(&ingresos, &egresos)
+	err := h.DB.QueryRow(query).Scan(&ingresos, &egresos)
 	if err != nil {
-		errorResponse(w, http.StatusInternalServerError, "Error al obtener resumen: "+err.Error())
+		errorResponse(w, http.StatusInternalServerError, "Error al calcular balances: "+err.Error())
 		return
 	}
 
@@ -104,7 +100,7 @@ func (h *FinanceHandler) GetResumen(w http.ResponseWriter, r *http.Request) {
 		Ingresos: ingresos,
 		Egresos:  egresos,
 		Balance:  ingresos - egresos,
-		Mes:      now.Format("January 2006"),
+		Mes:      time.Now().Format("January 2006"),
 	}
 
 	jsonResponse(w, http.StatusOK, resumen)

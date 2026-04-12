@@ -21,6 +21,7 @@ import {
 import { useViewStore } from '@/store/viewStore';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 
 interface MenuOption {
   name: string;
@@ -69,6 +70,18 @@ const menuStructure: MenuSection[] = [
 export const Sidebar: React.FC = () => {
   const { isSidebarOpen, toggleSidebar } = useViewStore();
   const pathname = usePathname();
+  const { user, logout, isAdmin } = useAuth();
+
+  const filteredMenu = menuStructure.map(section => ({
+    ...section,
+    options: section.options.filter(option => {
+      // Ocultar secciones sensibles a vendedores
+      if (!isAdmin && ['/finanzas', '/compras', '/reportes', '/ajustes'].includes(option.path)) {
+        return false;
+      }
+      return true;
+    })
+  })).filter(section => section.options.length > 0);
 
   return (
     <>
@@ -129,7 +142,7 @@ export const Sidebar: React.FC = () => {
         
         {/* Menu Area */}
         <nav className={`flex-1 ${isSidebarOpen ? 'overflow-y-auto' : 'overflow-hidden lg:overflow-visible'} px-3 space-y-6 custom-scrollbar pb-6`}>
-          {menuStructure.map((section) => (
+          {filteredMenu.map((section) => (
             <div key={section.title} className="space-y-1.5">
               {isSidebarOpen && (
                 <h3 className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
@@ -179,22 +192,19 @@ export const Sidebar: React.FC = () => {
           `}>
             <div className="relative shrink-0">
               <div className={`flex items-center justify-center bg-primary/10 text-primary font-black rounded-full border border-primary/10 ${isSidebarOpen ? 'w-10 h-10 text-base' : 'w-12 h-12 text-lg'}`}>
-                L
+                {user?.nombre.charAt(0).toUpperCase() || 'U'}
               </div>
               <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
             </div>
             {isSidebarOpen && (
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-slate-800 truncate">Luigi Admin</p>
-                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">Administrador</p>
+                <p className="text-xs font-bold text-slate-800 truncate">{user?.nombre || 'Usuario'}</p>
+                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">{user?.rol || 'Rol'}</p>
               </div>
             )}
             {isSidebarOpen && (
               <button 
-                onClick={() => {
-                  localStorage.removeItem('auth_token');
-                  window.location.href = '/login';
-                }}
+                onClick={logout}
                 className="btn btn-ghost btn-xs btn-square text-slate-300 hover:text-red-500 transition-colors tooltip tooltip-top" 
                 data-tip="Cerrar Sesión"
               >

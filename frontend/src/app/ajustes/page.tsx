@@ -1,21 +1,23 @@
 "use client";
 
 import React, { useState } from 'react';
-import { 
-  Settings, 
-  Store, 
-  Receipt, 
-  ShieldCheck, 
-  Database, 
-  Globe, 
-  Bell, 
+import {
+  Settings,
+  Store,
+  Receipt,
+  ShieldCheck,
+  Database,
+  Globe,
+  Bell,
   Save,
   Image as ImageIcon,
   Printer,
   Users,
   UserPlus,
   Shield,
-  Key
+  Key,
+  CheckCircle2,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -44,11 +46,10 @@ export default function AjustesPage() {
             <button
               key={section.id}
               onClick={() => setActiveTab(section.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
-                activeTab === section.id 
-                  ? 'bg-primary text-white shadow-md' 
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === section.id
+                  ? 'bg-primary text-white shadow-md'
                   : 'text-slate-500 hover:bg-slate-50 hover:text-primary'
-              }`}
+                }`}
             >
               <section.icon size={18} strokeWidth={activeTab === section.id ? 2.5 : 2} />
               {section.label}
@@ -68,7 +69,7 @@ export default function AjustesPage() {
               </h2>
               <p className="text-xs font-medium text-slate-400 mt-1">Administra los parámetros generales de tu papelería</p>
             </div>
-            <button 
+            <button
               onClick={handleSave}
               className="btn btn-primary btn-sm px-6 rounded-lg gap-2 border-none"
             >
@@ -108,9 +109,8 @@ export default function AjustesPage() {
                           <p className="text-sm font-black text-slate-700 uppercase tracking-tight">{user.nombre}</p>
                           <p className="text-[10px] font-bold text-slate-400">{user.email}</p>
                           <div className="flex items-center gap-2 mt-2">
-                            <span className={`badge border-none font-black text-[8px] uppercase px-2 py-2 rounded-md ${
-                              user.rol === 'administrador' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'
-                            }`}>
+                            <span className={`badge border-none font-black text-[8px] uppercase px-2 py-2 rounded-md ${user.rol === 'administrador' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'
+                              }`}>
                               {user.rol}
                             </span>
                             <span className="badge badge-success border-none font-black text-[8px] uppercase px-2 py-2 rounded-md text-white">
@@ -137,7 +137,7 @@ export default function AjustesPage() {
                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Configuración por nivel de rol</p>
                     </div>
                   </div>
-                  
+
                   <div className="bg-slate-50 rounded-3xl border border-slate-100 overflow-hidden">
                     <table className="table table-lg w-full">
                       <thead className="bg-white/50 text-[10px] uppercase font-black text-slate-400 border-b border-slate-100">
@@ -221,7 +221,7 @@ export default function AjustesPage() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center justify-between p-6 bg-primary/5 rounded-3xl border border-primary/10">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center text-white shadow-lg shadow-primary/20">
@@ -255,7 +255,7 @@ export default function AjustesPage() {
                     </select>
                   </div>
                 </div>
-                
+
                 <div className="space-y-6">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Alertas Inteligentes</label>
                   <div className="space-y-3">

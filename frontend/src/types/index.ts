@@ -38,6 +38,8 @@ export interface Producto {
   descripcion?: string; // Detalle ampliado del producto o servicio
   ubicacion?: string; // Ej: Bodega, Tienda
   ubicacionEspecifica?: string; // Ej: Pasillo 1, Estante A
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DetalleVenta {
@@ -54,6 +56,8 @@ export interface Venta {
   detalles: DetalleVenta[];
   total: number;
   estado: 'Completada' | 'Pendiente' | 'Cancelada';
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ReporteResumen {
@@ -86,6 +90,8 @@ export interface Proveedor {
   telefono: string;
   direccion?: string;
   categoria: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DetalleCompra {
@@ -105,6 +111,8 @@ export interface Compra {
   total: number;
   estado: 'Completada' | 'Pendiente' | 'Cancelada';
   metodoPago: 'Efectivo' | 'Tarjeta' | 'Transferencia';
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface MovimientoInventario {

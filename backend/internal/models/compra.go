@@ -6,6 +6,9 @@ type Compra struct {
 	ProveedorID string          `json:"proveedor_id"`
 	Total       float64         `json:"total"`
 	MetodoPago  string          `json:"metodo_pago"`
+	CreatedAt   string          `json:"created_at"`
+	UpdatedAt   string          `json:"updated_at"`
+	DeletedAt   *string         `json:"deleted_at"`
 	Detalles    []CompraDetalle `json:"detalles"`
 }
 

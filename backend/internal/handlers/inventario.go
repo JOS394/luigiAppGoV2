@@ -13,7 +13,13 @@ type InventoryHandler struct {
 }
 
 func (h *InventoryHandler) UpdateStock(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
+	if r.Method != http.MethodPost && r.Method != http.MethodPatch {
+		w.Header().Set("Allow", "POST, PATCH")
+		errorResponse(w, http.StatusMethodNotAllowed, "Método no permitido")
+		return
+	}
+
+	id := getID(r)
 	if id == "" {
 		errorResponse(w, http.StatusBadRequest, "ID del producto es requerido")
 		return

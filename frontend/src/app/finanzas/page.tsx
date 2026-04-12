@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { apiService } from '@/services/api';
 import type { MovimientoFinanciero, ResumenFinanciero } from '@/types';
 import { toast } from 'sonner';
+import { ProtectedRoute } from '@/components/shared/ProtectedRoute';
 
 // Componentes extraídos
 import { FinanceSummary } from '@/components/finanzas/FinanceSummary';
@@ -106,63 +107,65 @@ export default function FinanzasPage() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      <FinanceSummary 
-        resumen={resumen} 
-        onRealizarCorte={() => setShowCorteConfirm(true)} 
-      />
+    <ProtectedRoute allowedRoles={['administrador']}>
+      <div className="space-y-8 animate-in fade-in duration-700">
+        <FinanceSummary 
+          resumen={resumen} 
+          onRealizarCorte={() => setShowCorteConfirm(true)} 
+        />
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        <div className="xl:col-span-2">
-          <MovementsTable 
-            movimientos={filteredMovimientos} 
-            onFilter={() => setShowFilterModal(true)}
-            onExport={() => setShowExportModal(true)}
-          />
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          <div className="xl:col-span-2">
+            <MovementsTable 
+              movimientos={filteredMovimientos} 
+              onFilter={() => setShowFilterModal(true)}
+              onExport={() => setShowExportModal(true)}
+            />
+          </div>
+
+          <div className="space-y-6">
+            <QuickActions 
+              onAddIncome={() => { setMovementType('Ingreso'); setShowMovementModal(true); }}
+              onAddExpense={() => { setMovementType('Egreso'); setShowMovementModal(true); }}
+            />
+            <SalesGoal current={resumen?.ingresosMes || 0} goal={40000} />
+          </div>
         </div>
 
-        <div className="space-y-6">
-          <QuickActions 
-            onAddIncome={() => { setMovementType('Ingreso'); setShowMovementModal(true); }}
-            onAddExpense={() => { setMovementType('Egreso'); setShowMovementModal(true); }}
-          />
-          <SalesGoal current={resumen?.ingresosMes || 0} goal={40000} />
-        </div>
+        <MovementModal 
+          show={showMovementModal}
+          type={movementType}
+          onClose={() => setShowMovementModal(false)}
+          onSubmit={handleCreateMovement}
+        />
+
+        <FinanceFilterModal 
+          show={showFilterModal}
+          onClose={() => setShowFilterModal(false)}
+          filters={filters}
+          setFilters={setFilters}
+          onClear={clearFilters}
+        />
+
+        <ExportModal 
+          show={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          onExport={handleExport}
+        />
+
+        <ConfirmDialog 
+          show={showCorteConfirm}
+          onClose={() => setShowCorteConfirm(false)}
+          onConfirm={() => {
+            toast.success('Corte de caja realizado con éxito');
+            setShowCorteConfirm(false);
+          }}
+          title="¿Realizar Corte de Caja?"
+          message="Esta acción cerrará el turno actual y generará un resumen de los movimientos en efectivo hasta el momento."
+          confirmLabel="Confirmar Corte"
+          variant="info"
+        />
       </div>
-
-      <MovementModal 
-        show={showMovementModal}
-        type={movementType}
-        onClose={() => setShowMovementModal(false)}
-        onSubmit={handleCreateMovement}
-      />
-
-      <FinanceFilterModal 
-        show={showFilterModal}
-        onClose={() => setShowFilterModal(false)}
-        filters={filters}
-        setFilters={setFilters}
-        onClear={clearFilters}
-      />
-
-      <ExportModal 
-        show={showExportModal}
-        onClose={() => setShowExportModal(false)}
-        onExport={handleExport}
-      />
-
-      <ConfirmDialog 
-        show={showCorteConfirm}
-        onClose={() => setShowCorteConfirm(false)}
-        onConfirm={() => {
-          toast.success('Corte de caja realizado con éxito');
-          setShowCorteConfirm(false);
-        }}
-        title="¿Realizar Corte de Caja?"
-        message="Esta acción cerrará el turno actual y generará un resumen de los movimientos en efectivo hasta el momento."
-        confirmLabel="Confirmar Corte"
-        variant="info"
-      />
-    </div>
+    </ProtectedRoute>
   );
 }

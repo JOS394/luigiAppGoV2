@@ -80,3 +80,38 @@ func (h *PurchaseHandler) CreateCompra(w http.ResponseWriter, r *http.Request) {
 
 	jsonResponse(w, http.StatusCreated, map[string]string{"message": "Compra registrada con éxito", "id": c.ID})
 }
+
+func (h *PurchaseHandler) GetCompras(w http.ResponseWriter, r *http.Request) {
+	rows, err := h.DB.Query(`SELECT id, fecha, proveedor_id, total, metodo_pago, created_at, updated_at, deleted_at FROM compras WHERE deleted_at IS NULL ORDER BY fecha DESC`)
+	if err != nil {
+		errorResponse(w, http.StatusInternalServerError, "Error al obtener compras: "+err.Error())
+		return
+	}
+	defer rows.Close()
+
+	compras := []models.Compra{}
+	for rows.Next() {
+		var c models.Compra
+		c.Detalles = []models.CompraDetalle{} // Inicializar detalles también
+		if err := rows.Scan(&c.ID, &c.Fecha, &c.ProveedorID, &c.Total, &c.MetodoPago, &c.CreatedAt, &c.UpdatedAt, &c.DeletedAt); err != nil {
+			errorResponse(w, http.StatusInternalServerError, "Error al escanear compras: "+err.Error())
+			return
+		}
+
+		// Obtener detalles de la compra
+		detailRows, err := h.DB.Query(`SELECT id, producto_id, cantidad, precio_unitario, precio_sugerido, subtotal FROM compra_detalles WHERE compra_id = ?`, c.ID)
+		if err == nil {
+			for detailRows.Next() {
+				var d models.CompraDetalle
+				if err := detailRows.Scan(&d.ID, &d.ProductoID, &d.Cantidad, &d.PrecioUnitario, &d.PrecioSugerido, &d.Subtotal); err == nil {
+					c.Detalles = append(c.Detalles, d)
+				}
+			}
+			detailRows.Close() // Cerrar manualmente dentro del bucle
+		}
+
+		compras = append(compras, c)
+	}
+
+	jsonResponse(w, http.StatusOK, compras)
+}

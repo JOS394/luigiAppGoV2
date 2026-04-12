@@ -15,16 +15,15 @@ type ProductHandler struct {
 	DB *sql.DB
 }
 
-// GetProductos maneja el GET /api/productos
 func (h *ProductHandler) GetProductos(w http.ResponseWriter, r *http.Request) {
-	// 1. Ejecutar la consulta SQL
-	query := `SELECT id, nombre, precio, costo, costo_unitario, stock, tipo, codigo_barras, ubicacion, imagen_url FROM productos`
+	// 1. Ejecutar la consulta SQL (Solo los no eliminados)
+	query := `SELECT id, nombre, precio, costo, costo_unitario, stock, categoria, tipo, codigo_barras, ubicacion, ubicacion_especifica, imagen_url, created_at, updated_at, deleted_at FROM productos WHERE deleted_at IS NULL`
 	rows, err := h.DB.Query(query)
 	if err != nil {
-		http.Error(w, "Error al consultar productos: "+err.Error(), http.StatusInternalServerError)
+		errorResponse(w, http.StatusInternalServerError, "Error al consultar productos: "+err.Error())
 		return
 	}
-	defer rows.Close() // ¡Muy importante! Evita fugas de memoria
+	defer rows.Close()
 
 	// 2. Crear un slice para guardar los productos
 	productos := []models.Producto{}
@@ -32,9 +31,9 @@ func (h *ProductHandler) GetProductos(w http.ResponseWriter, r *http.Request) {
 	// 3. Iterar sobre las filas
 	for rows.Next() {
 		var p models.Producto
-		err := rows.Scan(&p.ID, &p.Nombre, &p.Precio, &p.Costo, &p.CostoUnitario, &p.Stock, &p.Tipo, &p.CodigoBarras, &p.Ubicacion, &p.ImagenURL)
+		err := rows.Scan(&p.ID, &p.Nombre, &p.Precio, &p.Costo, &p.CostoUnitario, &p.Stock, &p.Categoria, &p.Tipo, &p.CodigoBarras, &p.Ubicacion, &p.UbicacionEspecifica, &p.ImagenURL, &p.CreatedAt, &p.UpdatedAt, &p.DeletedAt)
 		if err != nil {
-			http.Error(w, "Error al leer fila: "+err.Error(), http.StatusInternalServerError)
+			errorResponse(w, http.StatusInternalServerError, "Error al leer fila: "+err.Error())
 			return
 		}
 		productos = append(productos, p)
@@ -55,8 +54,8 @@ func (h *ProductHandler) CreateProducto(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// 2. Insertar (SQL)
-	query := `INSERT INTO productos (id, nombre, precio, costo, costo_unitario, stock, tipo, codigo_barras, imagen_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err := h.DB.Exec(query, p.ID, p.Nombre, p.Precio, p.Costo, p.CostoUnitario, p.Stock, p.Tipo, p.CodigoBarras, p.ImagenURL)
+	query := `INSERT INTO productos (id, nombre, precio, costo, costo_unitario, stock, categoria, tipo, codigo_barras, ubicacion, ubicacion_especifica, imagen_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	_, err := h.DB.Exec(query, p.ID, p.Nombre, p.Precio, p.Costo, p.CostoUnitario, p.Stock, p.Categoria, p.Tipo, p.CodigoBarras, p.Ubicacion, p.UbicacionEspecifica, p.ImagenURL)
 
 	if err != nil {
 		// Si el error es porque el ID ya existe
@@ -69,7 +68,7 @@ func (h *ProductHandler) CreateProducto(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *ProductHandler) UploadImagen(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
+	id := getID(r)
 	if id == "" {
 		errorResponse(w, http.StatusBadRequest, "ID del producto es requerido")
 		return
@@ -117,5 +116,34 @@ func (h *ProductHandler) UploadImagen(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, http.StatusOK, map[string]string{"message": "Imagen subida con éxito", "url": url})
+}
+
+func (h *ProductHandler) UpdateProducto(w http.ResponseWriter, r *http.Request) {
+	id := getID(r)
+	var p models.Producto
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		errorResponse(w, http.StatusBadRequest, "JSON inválido")
+		return
+	}
+
+	query := `UPDATE productos SET nombre = ?, precio = ?, costo = ?, costo_unitario = ?, stock = ?, categoria = ?, tipo = ?, codigo_barras = ?, ubicacion = ?, ubicacion_especifica = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL`
+	_, err := h.DB.Exec(query, p.Nombre, p.Precio, p.Costo, p.CostoUnitario, p.Stock, p.Categoria, p.Tipo, p.CodigoBarras, p.Ubicacion, p.UbicacionEspecifica, id)
+	if err != nil {
+		errorResponse(w, http.StatusInternalServerError, "Error al actualizar producto: "+err.Error())
+		return
+	}
+
+	jsonResponse(w, http.StatusOK, map[string]string{"message": "Producto actualizado con éxito"})
+}
+
+func (h *ProductHandler) DeleteProducto(w http.ResponseWriter, r *http.Request) {
+	id := getID(r)
+	// Soft delete
+	_, err := h.DB.Exec(`UPDATE productos SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?`, id)
+	if err != nil {
+		errorResponse(w, http.StatusInternalServerError, "Error al eliminar producto: "+err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 

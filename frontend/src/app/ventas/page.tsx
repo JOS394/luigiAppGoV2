@@ -46,6 +46,11 @@ export default function VentasPage() {
     }
   };
 
+  const handleRefresh = () => {
+    // Pequeño delay para asegurar que el backend haya completado la escritura en SQLite
+    setTimeout(fetchData, 500);
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -171,7 +176,7 @@ export default function VentasPage() {
       {/* Contenido de la Pestaña */}
       <div className="flex-1 overflow-hidden">
         {activeTab === 'terminal' ? (
-          <POSView products={productos} />
+          <POSView products={productos} onSuccess={handleRefresh} />
         ) : (
           <div className="h-full overflow-y-auto pr-1 custom-scrollbar">
             {/* VISTA MÓVIL (CARDS) */}
