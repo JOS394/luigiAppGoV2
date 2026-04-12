@@ -3,13 +3,14 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtKey = []byte("tu_clave_secreta_super_segura") // Debe coincidir con el del handler
+var jwtKey = []byte("tu_clave_secreta_super_segura")
 
 type contextKey string
 
@@ -18,18 +19,16 @@ const (
 	UserRolKey  contextKey = "rol"
 )
 
-func AuthMiddleware(next http.Handler) http.Handler {
+func Auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
-			fmt.Printf("⚠️ Auth Error: No Authorization header for %s %s\n", r.Method, r.URL.Path)
 			http.Error(w, `{"error": "Authorization header requerido"}`, http.StatusUnauthorized)
 			return
 		}
 
 		bearerToken := strings.Split(authHeader, " ")
 		if len(bearerToken) != 2 {
-			fmt.Printf("⚠️ Auth Error: Invalid token format for %s %s\n", r.Method, r.URL.Path)
 			http.Error(w, `{"error": "Formato de token inválido"}`, http.StatusUnauthorized)
 			return
 		}
@@ -42,17 +41,11 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		})
 
 		if err != nil || !token.Valid {
-			fmt.Printf("❌ Auth Error: Invalid token for %s %s: %v\n", r.Method, r.URL.Path, err)
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(`{"error": "Token inválido o expirado"}`))
+			log.Printf("❌ Auth Error: %v", err)
+			http.Error(w, `{"error": "Token inválido o expirado"}`, http.StatusUnauthorized)
 			return
 		}
 
-		// Log de éxito
-		fmt.Printf("✅ Auth Success: %s %s (User: %v)\n", r.Method, r.URL.Path, claims["user_id"])
-
-		// Adjuntar información al contexto
 		ctx := context.WithValue(r.Context(), UserIDKey, claims["user_id"])
 		ctx = context.WithValue(ctx, UserRolKey, claims["rol"])
 
@@ -60,15 +53,21 @@ func AuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func RoleMiddleware(requiredRole string, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userRol := r.Context().Value(UserRolKey).(string)
+func RequireRole(requiredRole string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			userRol, ok := r.Context().Value(UserRolKey).(string)
+			if !ok {
+				http.Error(w, `{"error": "No se pudo identificar el rol"}`, http.StatusInternalServerError)
+				return
+			}
 
-		if userRol != requiredRole && userRol != "administrador" {
-			http.Error(w, `{"error": "Acceso denegado: permisos insuficientes"}`, http.StatusForbidden)
-			return
-		}
+			if userRol != requiredRole && userRol != "administrador" {
+				http.Error(w, `{"error": "Acceso denegado: permisos insuficientes"}`, http.StatusForbidden)
+				return
+			}
 
-		next.ServeHTTP(w, r)
-	})
+			next.ServeHTTP(w, r)
+		})
+	}
 }

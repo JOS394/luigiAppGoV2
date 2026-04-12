@@ -19,9 +19,27 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ products }) => {
 
   const categories = ['Todos', ...new Set(products.map(p => p.categoria))];
 
+  const handleSearchChange = (val: string) => {
+    setFilter(val);
+    
+    // Lógica de Scanner: Si el valor coincide exactamente con un código de barras, añadir y limpiar
+    if (val.length >= 3) {
+      const productByBarcode = products.find(p => p.codigoBarras === val);
+      if (productByBarcode) {
+        addToCart(productByBarcode);
+        setFilter('');
+        toast.success(`Añadido: ${productByBarcode.nombre}`, {
+          duration: 1500,
+          position: 'bottom-center'
+        });
+      }
+    }
+  };
+
   const filteredProducts = products.filter(p => {
     const matchesFilter = p.nombre.toLowerCase().includes(filter.toLowerCase()) || 
-                          p.id.includes(filter);
+                          p.id.includes(filter) ||
+                          (p.codigoBarras && p.codigoBarras.includes(filter));
     const matchesCategory = activeCategory === 'Todos' || p.categoria === activeCategory;
     return matchesFilter && matchesCategory;
   });
@@ -34,10 +52,11 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ products }) => {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input 
             type="text" 
-            placeholder="Buscar productos o servicios..." 
-            className="input input-bordered w-full pl-11 bg-white border-slate-200 rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all text-sm font-medium h-12 shadow-sm"
+            placeholder="Escanear código o buscar producto..." 
+            className="input input-bordered w-full pl-11 bg-white border-slate-200 rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all text-sm font-bold h-12 shadow-sm"
+            autoFocus
             value={filter}
-            onChange={(e) => setFilter(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
           />
         </div>
         

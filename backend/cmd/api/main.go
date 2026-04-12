@@ -18,18 +18,20 @@ func main() {
 	createAdmin := flag.Bool("create-admin", false, "Crea un usuario administrador inicial")
 	flag.Parse()
 
+	// 1. Conexión a Base de Datos
 	db, err := database.Connect("./luigiapp.db")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
-	// Ejecutamos el setup para crear las tablas
+	// 2. Setup de Tablas
 	err = database.SetupDatabase(db)
 	if err != nil {
 		log.Fatalf("Error al configurar la base de datos: %v", err)
 	}
 
+	// 3. Script de Admin Inicial
 	if *createAdmin {
 		createInitialAdmin(db)
 		return
@@ -37,28 +39,9 @@ func main() {
 
 	app := &application{db: db}
 
-	// Middleware de CORS y Logger
-	corsHandler := func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Log de cada petición que llega
-			log.Printf("📥 [%s] %s %s", r.RemoteAddr, r.Method, r.URL.Path)
-
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-			
-			if r.Method == "OPTIONS" {
-				w.WriteHeader(http.StatusOK)
-				return
-			}
-			
-			next.ServeHTTP(w, r)
-		})
-	}
-
-	log.Println("🚀 Servidor en http://localhost:8080")
-	// Aplicamos el middleware de CORS
-	err = http.ListenAndServe(":8080", corsHandler(app.routes()))
+	// 4. Iniciar Servidor
+	log.Println("🚀 Servidor LuigiApp V3 en http://localhost:8080")
+	err = http.ListenAndServe(":8080", app.routes())
 	if err != nil {
 		log.Fatal(err)
 	}

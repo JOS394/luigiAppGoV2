@@ -326,6 +326,9 @@ export const apiService = {
     delete: async (id: string): Promise<void> => {
       await fetcher(`/productos/${id}`, { method: 'DELETE' });
     },
+    getAlertas: async (): Promise<any[]> => {
+      return await fetcher('/productos/alertas');
+    }
   },
   clientes: {
     getAll: async (): Promise<Cliente[]> => {
@@ -368,19 +371,34 @@ export const apiService = {
     getResumen: async (): Promise<ReporteResumen> => {
       const data = await fetcher('/reportes/resumen');
       return { 
-        ventasHoy: data.ingresos || 0, 
-        ticketsPromedio: 0, 
-        transaccionesTotales: 0, 
-        crecimiento: 0,
-        utilidadBruta: data.balance || 0,
-        proyeccionMes: (data.ingresos || 0) * 30
+        ventasHoy: data.ventas_hoy || 0, 
+        ticketsPromedio: data.tickets_promedio || 0, 
+        transaccionesTotales: data.transacciones_totales || 0, 
+        crecimiento: data.crecimiento || 0,
+        utilidadBruta: data.utilidad_bruta || 0,
+        proyeccionMes: data.proyeccion_mes || 0
       };
     },
     getDetallado: async (periodo: string): Promise<ReporteDetallado> => {
+      const data = await fetcher('/reportes/detallado');
       return {
-        topProductos: [],
-        topCategorias: [],
-        ventasSemanales: []
+        topProductos: (data.top_productos || []).map((p: any) => ({
+          id: p.id,
+          nombre: p.nombre,
+          valor: p.valor,
+          cantidad: p.cantidad,
+          porcentaje: 0 // Podríamos calcularlo si fuera necesario
+        })),
+        topCategorias: (data.top_categorias || []).map((c: any) => ({
+          id: c.nombre,
+          nombre: c.nombre,
+          valor: c.valor,
+          porcentaje: 0
+        })),
+        ventasSemanales: (data.ventas_semanales || []).map((v: any) => ({
+          dia: v.dia,
+          monto: v.monto
+        }))
       };
     }
   },

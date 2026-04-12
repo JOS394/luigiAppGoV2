@@ -136,14 +136,31 @@ func (h *ProductHandler) UpdateProducto(w http.ResponseWriter, r *http.Request) 
 	jsonResponse(w, http.StatusOK, map[string]string{"message": "Producto actualizado con éxito"})
 }
 
-func (h *ProductHandler) DeleteProducto(w http.ResponseWriter, r *http.Request) {
-	id := getID(r)
-	// Soft delete
-	_, err := h.DB.Exec(`UPDATE productos SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?`, id)
+func (h *ProductHandler) GetAlertas(w http.ResponseWriter, r *http.Request) {
+	// Buscamos productos con stock < 5 que no estén eliminados
+	query := `SELECT id, nombre, stock FROM productos WHERE stock < 5 AND deleted_at IS NULL AND tipo = 'producto'`
+	rows, err := h.DB.Query(query)
 	if err != nil {
-		errorResponse(w, http.StatusInternalServerError, "Error al eliminar producto: "+err.Error())
+		errorResponse(w, http.StatusInternalServerError, "Error al consultar alertas: "+err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	defer rows.Close()
+
+	alertas := []map[string]interface{}{}
+	for rows.Next() {
+		var id, nombre string
+		var stock int
+		if err := rows.Scan(&id, &nombre, &stock); err == nil {
+			alertas = append(alertas, map[string]interface{}{
+				"id":      id,
+				"nombre":  nombre,
+				"stock":   stock,
+				"mensaje": "Stock Crítico",
+				"tipo":    "peligro",
+			})
+		}
+	}
+
+	jsonResponse(w, http.StatusOK, alertas)
 }
 

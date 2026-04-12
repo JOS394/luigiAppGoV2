@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+
+	"github.com/go-chi/chi/v5"
 )
 
 // jsonResponse es un helper para enviar respuestas JSON exitosas
@@ -21,14 +23,13 @@ func errorResponse(w http.ResponseWriter, status int, message string) {
 	jsonResponse(w, status, map[string]string{"error": message})
 }
 
-// getID intenta obtener el ID del path value, o del path mismo si falla (para Go < 1.22 o problemas de router)
+// getID intenta obtener el ID usando chi.URLParam, con fallback manual
 func getID(r *http.Request) string {
-	id := r.PathValue("id")
+	id := chi.URLParam(r, "id")
 	if id != "" {
 		return id
 	}
-	// Fallback simple: tomar el último segmento del path si no es una de las palabras clave
-	// Esto es menos robusto pero ayuda si el router no está capturando bien el path value
+	// Fallback manual por si el router no está capturando bien el path value
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	if len(parts) > 0 {
 		last := parts[len(parts)-1]

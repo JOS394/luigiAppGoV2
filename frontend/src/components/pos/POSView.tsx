@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import type { Producto } from '../../types';
+import type { Producto, Venta } from '../../types';
 import { usePosStore } from '../../store/posStore';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { ProductGrid } from './ProductGrid';
 import { CartItem } from './CartItem';
+import { ReceiptModal } from './modals/ReceiptModal';
 import { 
   ShoppingCart, 
   Trash2, 
@@ -46,6 +47,8 @@ export const POSView: React.FC<POSViewProps> = ({ products, onSuccess }) => {
   const [animateCart, setAnimateCart] = useState(false);
   const [clienteNombre, setClienteNombre] = useState('Cliente General');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [lastVenta, setLastVenta] = useState<Venta | null>(null);
   
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
   const prevCountRef = useRef(cartCount);
@@ -80,9 +83,12 @@ export const POSView: React.FC<POSViewProps> = ({ products, onSuccess }) => {
         }))
       };
 
-      await apiService.ventas.create(ventaData);
+      const nuevaVenta = await apiService.ventas.create(ventaData);
       
       toast.success('Venta registrada con éxito');
+      setLastVenta(nuevaVenta);
+      setShowReceipt(true);
+      
       clearCart();
       setClienteNombre('Cliente General');
       setIsExpanded(false);
@@ -266,6 +272,13 @@ export const POSView: React.FC<POSViewProps> = ({ products, onSuccess }) => {
            </button>
         </div>
       )}
+
+      <ReceiptModal 
+        show={showReceipt}
+        onClose={() => setShowReceipt(false)}
+        venta={lastVenta}
+        productos={products}
+      />
     </div>
   );
 };

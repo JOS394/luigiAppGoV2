@@ -1,8 +1,9 @@
 "use client";
 
-import React from 'react';
-import { usePathname } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { apiService } from '@/services/api';
 import {
   Bell,
   Search,
@@ -19,6 +20,23 @@ import {
 
 export const Header: React.FC = () => {
   const pathname = usePathname();
+  const router = useRouter();
+  const [alertas, setAlertas] = useState<any[]>([]);
+
+  const fetchAlertas = async () => {
+    try {
+      const data = await apiService.productos.getAlertas();
+      setAlertas(data);
+    } catch (err) {
+      console.error("Error al obtener alertas", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchAlertas();
+    const interval = setInterval(fetchAlertas, 30000); // Polling cada 30 seg
+    return () => clearInterval(interval);
+  }, []);
 
   const getPageTitle = () => {
     const path = pathname.split('/').filter(Boolean)[0];
@@ -99,51 +117,44 @@ export const Header: React.FC = () => {
         <div className="dropdown dropdown-end">
           <div tabIndex={0} role="button" className="btn btn-ghost btn-sm btn-square text-slate-400 hover:text-primary relative tooltip tooltip-bottom" data-tip="Notificaciones">
             <Bell size={20} />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+            {alertas.length > 0 && (
+              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+            )}
           </div>
           <div tabIndex={0} className="dropdown-content z-[100] card card-compact w-80 p-0 shadow-2xl bg-white border border-slate-100 mt-4 rounded-2xl overflow-hidden">
             <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
               <span className="font-black text-[10px] uppercase tracking-[0.2em] text-slate-500">Notificaciones</span>
-              <span className="badge badge-primary badge-sm text-[9px] font-black text-white px-2">3 NUEVAS</span>
+              <span className={`badge ${alertas.length > 0 ? 'badge-primary' : 'badge-ghost'} badge-sm text-[9px] font-black text-white px-2`}>
+                {alertas.length} {alertas.length === 1 ? 'NUEVA' : 'NUEVAS'}
+              </span>
             </div>
             <div className="max-h-96 overflow-y-auto custom-scrollbar">
               <div className="divide-y divide-slate-50">
-                {/* Notificación 1 */}
-                <button className="w-full p-4 flex gap-4 hover:bg-slate-50 transition-colors text-left group">
-                  <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center text-red-500 shrink-0">
-                    <AlertTriangle size={18} />
+                {alertas.length > 0 ? alertas.map((alerta, idx) => (
+                  <button 
+                    key={idx} 
+                    onClick={() => router.push('/inventario')}
+                    className="w-full p-4 flex gap-4 hover:bg-slate-50 transition-colors text-left group"
+                  >
+                    <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center text-red-500 shrink-0">
+                      <AlertTriangle size={18} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-700 leading-tight">Stock Crítico: {alerta.nombre}</p>
+                      <p className="text-[10px] text-slate-400 mt-1">Quedan solo {alerta.stock} unidades en existencia.</p>
+                      <p className="text-[9px] font-black text-primary uppercase mt-2 opacity-0 group-hover:opacity-100 transition-opacity">Gestionar Stock</p>
+                    </div>
+                  </button>
+                )) : (
+                  <div className="p-8 text-center text-slate-300">
+                    <CheckCircle2 size={32} className="mx-auto mb-2 opacity-20" />
+                    <p className="text-[10px] font-bold uppercase tracking-widest">Sin alertas pendientes</p>
                   </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-700 leading-tight">Stock Crítico: Cuaderno Profesional</p>
-                    <p className="text-[10px] text-slate-400 mt-1">Quedan menos de 5 unidades en bodega central.</p>
-                    <p className="text-[9px] font-black text-primary uppercase mt-2 opacity-0 group-hover:opacity-100 transition-opacity">Ver Inventario</p>
-                  </div>
-                </button>
-                {/* Notificación 2 */}
-                <button className="w-full p-4 flex gap-4 hover:bg-slate-50 transition-colors text-left group">
-                  <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-green-600 shrink-0">
-                    <CheckCircle2 size={18} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-700 leading-tight">Compra Recibida: Orden B-402</p>
-                    <p className="text-[10px] text-slate-400 mt-1">Se ha actualizado el stock de 12 productos.</p>
-                    <p className="text-[9px] font-black text-primary uppercase mt-2 opacity-0 group-hover:opacity-100 transition-opacity">Ver Detalles</p>
-                  </div>
-                </button>
-                {/* Notificación 3 */}
-                <button className="w-full p-4 flex gap-4 hover:bg-slate-50 transition-colors text-left group">
-                  <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 shrink-0">
-                    <Package size={18} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-700 leading-tight">Nuevo Registro de Cliente</p>
-                    <p className="text-[10px] text-slate-400 mt-1">María López ha sido añadida exitosamente.</p>
-                  </div>
-                </button>
+                )}
               </div>
             </div>
             <div className="p-3 bg-slate-50 border-t border-slate-100 text-center">
-              <button className="text-[10px] font-black text-slate-400 hover:text-primary uppercase tracking-widest transition-colors">Marcar todas como leídas</button>
+              <button className="text-[10px] font-black text-slate-400 hover:text-primary uppercase tracking-widest transition-colors">Ver todas las alertas</button>
             </div>
           </div>
         </div>
