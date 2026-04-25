@@ -164,3 +164,14 @@ func (h *ProductHandler) GetAlertas(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, http.StatusOK, alertas)
 }
 
+func (h *ProductHandler) DeleteProducto(w http.ResponseWriter, r *http.Request) {
+	id := getID(r)
+	// Soft delete
+	_, err := h.DB.Exec(`UPDATE productos SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?`, id)
+	if err != nil {
+		errorResponse(w, http.StatusInternalServerError, "Error al eliminar producto: "+err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+

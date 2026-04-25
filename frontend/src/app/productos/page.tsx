@@ -229,6 +229,7 @@ export default function ProductosPage() {
         show={showExportModal}
         onClose={() => setShowExportModal(false)}
         onExport={(msg) => { toast.success(msg); setShowExportModal(false); }}
+        context="productos"
       />
 
       <ImportModal 

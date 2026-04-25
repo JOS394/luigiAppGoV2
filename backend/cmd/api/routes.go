@@ -27,6 +27,7 @@ func (app *application) routes() http.Handler {
 	clientH := &handlers.ClientHandler{DB: app.db}
 	authH := &handlers.AuthHandler{DB: app.db}
 	reportH := &handlers.ReportHandler{DB: app.db}
+	exportH := &handlers.ExportHandler{DB: app.db}
 
 	// Rutas Públicas
 	r.Post("/api/auth/login", authH.Login)
@@ -44,6 +45,7 @@ func (app *application) routes() http.Handler {
 		r.Route("/api/productos", func(r chi.Router) {
 			r.Get("/", productH.GetProductos)
 			r.Get("/alertas", productH.GetAlertas)
+			r.Get("/{id}/movimientos", inventoryH.GetMovimientosByProducto)
 			r.Post("/{id}/stock", inventoryH.UpdateStock)
 			
 			// Solo Admin para estas acciones de productos
@@ -74,6 +76,15 @@ func (app *application) routes() http.Handler {
 		})
 		r.With(middleware.RequireRole("administrador")).Get("/api/reportes/resumen", reportH.GetResumen)
 		r.With(middleware.RequireRole("administrador")).Get("/api/reportes/detallado", reportH.GetDetallado)
+
+		// EXPORTACIÓN (Solo Admin)
+		r.Route("/api/export", func(r chi.Router) {
+			r.Use(middleware.RequireRole("administrador"))
+			r.Get("/productos", exportH.ExportProductos)
+			r.Get("/ventas", exportH.ExportVentas)
+			r.Get("/clientes", exportH.ExportClientes)
+			r.Get("/finanzas", exportH.ExportMovimientos)
+		})
 
 		// PROVEEDORES
 		r.Route("/api/proveedores", func(r chi.Router) {

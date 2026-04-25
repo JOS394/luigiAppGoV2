@@ -67,6 +67,15 @@ func (h *VentaHandler) CreateVenta(w http.ResponseWriter, r *http.Request) {
 				errorResponse(w, http.StatusInternalServerError, "Error al actualizar stock: "+err.Error())
 				return
 			}
+
+			// REGISTRO EN KARDEX
+			_, err = tx.Exec(`INSERT INTO inventario_movimientos (producto_id, tipo, cantidad, motivo) VALUES (?, ?, ?, ?)`,
+				d.ProductoID, "Salida", d.Cantidad, "Venta Folio: "+v.ID)
+			if err != nil {
+				tx.Rollback()
+				errorResponse(w, http.StatusInternalServerError, "Error al registrar Kardex: "+err.Error())
+				return
+			}
 		}
 	}
 

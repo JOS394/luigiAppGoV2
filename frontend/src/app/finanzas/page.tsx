@@ -151,6 +151,7 @@ export default function FinanzasPage() {
           show={showExportModal}
           onClose={() => setShowExportModal(false)}
           onExport={handleExport}
+          context="finanzas"
         />
 
         <ConfirmDialog 

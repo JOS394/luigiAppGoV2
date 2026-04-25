@@ -283,6 +283,7 @@ export default function ClientesPage() {
         show={showExportModal}
         onClose={() => setShowExportModal(false)}
         onExport={handleAction}
+        context="clientes"
       />
     </div>
   );

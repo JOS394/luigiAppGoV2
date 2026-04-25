@@ -56,6 +56,34 @@ const fetcher = async (endpoint: string, options?: RequestInit) => {
   }
 };
 
+const downloader = async (endpoint: string, filename: string) => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  const url = `${BASE_URL}${endpoint}`;
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
+    });
+
+    if (!response.ok) throw new Error("Error al descargar el archivo");
+
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(downloadUrl);
+  } catch (err) {
+    console.error("Download failed", err);
+    throw err;
+  }
+};
+
 // Mapeadores para convertir entre Backend (snake_case) y Frontend (camelCase)
 const mapProductoFromBackend = (p: any): Producto => {
   return {
@@ -203,7 +231,22 @@ export const apiService = {
         sinStock: 0
       };
     },
-    ajustarStock: async (data: { productoId: string, cantidad: number, tipo: 'Entrada' | 'Salida', motivo: string }): Promise<void> => {
+    getMovimientosByProducto: async (productoId: string): Promise<MovimientoInventario[]> => {
+      const data = await fetcher(`/productos/${productoId}/movimientos`);
+      return (data || []).map((m: any) => ({
+        id: m.id.toString(),
+        productoId: m.producto_id,
+        productoNombre: '', // No lo necesitamos en el modal ya que tenemos el producto
+        tipo: m.tipo,
+        cantidad: m.cantidad,
+        motivo: m.motivo,
+        fecha: m.fecha,
+        stockPrevio: 0, // El backend no devuelve estos cálculos por ahora
+        stockNuevo: 0
+      }));
+    },
+    ajustarStock: async (data: { productoId: string, cantidad: number, tipo: 'Entrada' | 'Salida' | 'Ajuste', motivo: string }): Promise<void> => {
+
       if (!data.productoId) throw new Error("ID del producto es requerido");
       await fetcher(`/productos/${data.productoId}/stock`, {
         method: 'POST',
@@ -430,5 +473,10 @@ export const apiService = {
       });
       return mapMovimientoFromBackend(res);
     }
+  },
+  export: {
+    productos: () => downloader('/export/productos', `productos_${new Date().toISOString().split('T')[0]}.csv`),
+    ventas: () => downloader('/export/ventas', `ventas_${new Date().toISOString().split('T')[0]}.csv`),
+    clientes: () => downloader('/export/clientes', `clientes_${new Date().toISOString().split('T')[0]}.csv`),
   }
 };

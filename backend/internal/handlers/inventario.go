@@ -87,3 +87,30 @@ func (h *InventoryHandler) GetValorInventario(w http.ResponseWriter, r *http.Req
 
 	jsonResponse(w, http.StatusOK, models.InventarioValor{ValorTotal: total})
 }
+
+func (h *InventoryHandler) GetMovimientosByProducto(w http.ResponseWriter, r *http.Request) {
+	id := getID(r)
+	if id == "" {
+		errorResponse(w, http.StatusBadRequest, "ID del producto es requerido")
+		return
+	}
+
+	rows, err := h.DB.Query(`SELECT id, producto_id, tipo, cantidad, motivo, fecha FROM inventario_movimientos WHERE producto_id = ? ORDER BY fecha DESC`, id)
+	if err != nil {
+		errorResponse(w, http.StatusInternalServerError, "Error al consultar historial: "+err.Error())
+		return
+	}
+	defer rows.Close()
+
+	movimientos := []models.InventarioMovimiento{}
+	for rows.Next() {
+		var m models.InventarioMovimiento
+		if err := rows.Scan(&m.ID, &m.ProductoID, &m.Tipo, &m.Cantidad, &m.Motivo, &m.Fecha); err != nil {
+			errorResponse(w, http.StatusInternalServerError, "Error al escanear fila: "+err.Error())
+			return
+		}
+		movimientos = append(movimientos, m)
+	}
+
+	jsonResponse(w, http.StatusOK, movimientos)
+}

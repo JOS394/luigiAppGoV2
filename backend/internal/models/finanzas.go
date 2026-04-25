@@ -8,6 +8,10 @@ type MovimientoFinanciero struct {
 	Monto       float64 `json:"monto"`
 	MetodoPago  string  `json:"metodo_pago"`
 	Descripcion string  `json:"descripcion"`
+	Referencia  string  `json:"referencia"`
+	CreatedAt   string  `json:"created_at"`
+	UpdatedAt   string  `json:"updated_at"`
+	DeletedAt   *string `json:"deleted_at"`
 }
 
 type ResumenFinanciero struct {

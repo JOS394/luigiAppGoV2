@@ -2,15 +2,42 @@
 
 import React from 'react';
 import { FileDown, X, FileText, ChevronRight } from 'lucide-react';
+import { apiService } from '@/services/api';
+import { toast } from 'sonner';
 
 interface ExportModalProps {
   show: boolean;
   onClose: () => void;
   onExport: (msg: string) => void;
+  context?: 'productos' | 'ventas' | 'clientes' | 'finanzas';
 }
 
-export function ExportModal({ show, onClose, onExport }: ExportModalProps) {
+export function ExportModal({ show, onClose, onExport, context }: ExportModalProps) {
   if (!show) return null;
+
+  const handleDownload = async (formatId: string, label: string) => {
+    if (formatId !== 'csv') {
+      toast.error('Formato no disponible en esta versión');
+      return;
+    }
+
+    if (!context || !apiService.export[context as keyof typeof apiService.export]) {
+      // Fallback a comportamiento mock
+      onExport(`Exportando a ${label}`);
+      return;
+    }
+
+    try {
+      toast.loading('Generando archivo...');
+      await apiService.export[context as keyof typeof apiService.export]();
+      toast.dismiss();
+      toast.success('Descarga iniciada');
+      onClose();
+    } catch (err) {
+      toast.dismiss();
+      toast.error('Fallo al exportar datos');
+    }
+  };
 
   const formats = [
     { id: 'excel', label: 'Microsoft Excel', ext: '.xlsx', color: 'text-green-600', bg: 'hover:bg-green-50' },
@@ -32,7 +59,7 @@ export function ExportModal({ show, onClose, onExport }: ExportModalProps) {
           {formats.map((format) => (
             <button 
               key={format.id} 
-              onClick={() => onExport(`Exportando a ${format.label}`)} 
+              onClick={() => handleDownload(format.id, format.label)} 
               className={`w-full flex items-center justify-between p-4 rounded-xl transition-all group ${format.bg}`}
             >
               <div className="flex items-center gap-4">

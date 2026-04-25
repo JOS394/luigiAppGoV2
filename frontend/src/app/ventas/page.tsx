@@ -284,6 +284,7 @@ export default function VentasPage() {
         show={showExportModal}
         onClose={() => setShowExportModal(false)}
         onExport={(msg) => { toast.success(msg); setShowExportModal(false); }}
+        context="ventas"
       />
     </div>
   );

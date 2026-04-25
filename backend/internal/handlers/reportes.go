@@ -3,9 +3,6 @@ package handlers
 import (
 	"database/sql"
 	"net/http"
-	"time"
-
-	"github.com/JOS394/luigiAppGoV2/internal/models"
 )
 
 type ReportHandler struct {
