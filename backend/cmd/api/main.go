@@ -25,10 +25,10 @@ func main() {
 	}
 	defer db.Close()
 
-	// 2. Setup de Tablas
-	err = database.SetupDatabase(db)
+	// 2. Ejecutar Migraciones
+	err = database.RunMigrations(db)
 	if err != nil {
-		log.Fatalf("Error al configurar la base de datos: %v", err)
+		log.Fatalf("Error al ejecutar migraciones: %v", err)
 	}
 
 	// 3. Script de Admin Inicial
