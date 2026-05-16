@@ -27,7 +27,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var u models.Usuario
-	query := `SELECT id, nombre, email, password_hash, rol, estado FROM usuarios WHERE email = ? AND deleted_at IS NULL`
+	query := `SELECT id, nombre, email, password_hash, rol, estado FROM usuarios WHERE email = $1 AND deleted_at IS NULL`
 	err := h.DB.QueryRow(query, req.Email).Scan(&u.ID, &u.Nombre, &u.Email, &u.PasswordHash, &u.Rol, &u.Estado)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -82,7 +82,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	id := "U-" + time.Now().Format("050415") // ID simple basado en tiempo para el ejemplo
 
-	_, err = h.DB.Exec(`INSERT INTO usuarios (id, nombre, email, password_hash, rol) VALUES (?, ?, ?, ?, ?)`,
+	_, err = h.DB.Exec(`INSERT INTO usuarios (id, nombre, email, password_hash, rol) VALUES ($1, $2, $3, $4, $5)`,
 		id, req.Nombre, req.Email, string(hashedPassword), req.Rol)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al crear usuario: "+err.Error())

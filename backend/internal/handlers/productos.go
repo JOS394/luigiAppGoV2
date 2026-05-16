@@ -80,9 +80,13 @@ func (h *ProductHandler) CreateProducto(w http.ResponseWriter, r *http.Request) 
 		errorResponse(w, http.StatusBadRequest, "El cuerpo de la petición no es un JSON válido")
 		return
 	}
+	if p.ID == "" {
+		errorResponse(w, http.StatusBadRequest, "El ID del producto es requerido")
+		return
+	}
 
 	// 2. Insertar (SQL)
-	query := `INSERT INTO productos (id, nombre, precio, costo, costo_unitario, stock, categoria, tipo, codigo_barras, ubicacion, ubicacion_especifica, imagen_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	query := `INSERT INTO productos (id, nombre, precio, costo, costo_unitario, stock, categoria, tipo, codigo_barras, ubicacion, ubicacion_especifica, imagen_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
 	_, err := h.DB.Exec(query, p.ID, p.Nombre, p.Precio, p.Costo, p.CostoUnitario, p.Stock, p.Categoria, p.Tipo, p.CodigoBarras, p.Ubicacion, p.UbicacionEspecifica, p.ImagenURL)
 
 	if err != nil {
@@ -137,7 +141,7 @@ func (h *ProductHandler) UploadImagen(w http.ResponseWriter, r *http.Request) {
 
 	// 4. Guardar la URL en la DB (URL relativa)
 	url := "/uploads/productos/" + filename
-	_, err = h.DB.Exec("UPDATE productos SET imagen_url = ? WHERE id = ?", url, id)
+	_, err = h.DB.Exec("UPDATE productos SET imagen_url = $1 WHERE id = $2", url, id)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "No se pudo actualizar la URL en la DB: "+err.Error())
 		return
@@ -154,7 +158,7 @@ func (h *ProductHandler) UpdateProducto(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	query := `UPDATE productos SET nombre = ?, precio = ?, costo = ?, costo_unitario = ?, stock = ?, categoria = ?, tipo = ?, codigo_barras = ?, ubicacion = ?, ubicacion_especifica = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL`
+	query := `UPDATE productos SET nombre = $1, precio = $2, costo = $3, costo_unitario = $4, stock = $5, categoria = $6, tipo = $7, codigo_barras = $8, ubicacion = $9, ubicacion_especifica = $10, updated_at = CURRENT_TIMESTAMP WHERE id = $11 AND deleted_at IS NULL`
 	_, err := h.DB.Exec(query, p.Nombre, p.Precio, p.Costo, p.CostoUnitario, p.Stock, p.Categoria, p.Tipo, p.CodigoBarras, p.Ubicacion, p.UbicacionEspecifica, id)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al actualizar producto: "+err.Error())
@@ -195,7 +199,7 @@ func (h *ProductHandler) GetAlertas(w http.ResponseWriter, r *http.Request) {
 func (h *ProductHandler) DeleteProducto(w http.ResponseWriter, r *http.Request) {
 	id := getID(r)
 	// Soft delete
-	_, err := h.DB.Exec(`UPDATE productos SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?`, id)
+	_, err := h.DB.Exec(`UPDATE productos SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1`, id)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al eliminar producto: "+err.Error())
 		return

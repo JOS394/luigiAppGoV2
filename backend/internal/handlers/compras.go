@@ -26,7 +26,7 @@ func (h *PurchaseHandler) CreateCompra(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 1. Insertar cabecera de compra
-	_, err = tx.Exec(`INSERT INTO compras (id, proveedor_id, total, metodo_pago) VALUES (?, ?, ?, ?)`,
+	_, err = tx.Exec(`INSERT INTO compras (id, proveedor_id, total, metodo_pago) VALUES ($1, $2, $3, $4)`,
 		c.ID, c.ProveedorID, c.Total, c.MetodoPago)
 	if err != nil {
 		tx.Rollback()
@@ -36,7 +36,7 @@ func (h *PurchaseHandler) CreateCompra(w http.ResponseWriter, r *http.Request) {
 
 	// 2. Insertar detalles y aumentar stock
 	for _, d := range c.Detalles {
-		_, err = tx.Exec(`INSERT INTO compra_detalles (compra_id, producto_id, cantidad, precio_unitario, precio_sugerido, subtotal) VALUES (?, ?, ?, ?, ?, ?)`,
+		_, err = tx.Exec(`INSERT INTO compra_detalles (compra_id, producto_id, cantidad, precio_unitario, precio_sugerido, subtotal) VALUES ($1, $2, $3, $4, $5, $6)`,
 			c.ID, d.ProductoID, d.Cantidad, d.PrecioUnitario, d.PrecioSugerido, d.Subtotal)
 		if err != nil {
 			tx.Rollback()
@@ -46,7 +46,7 @@ func (h *PurchaseHandler) CreateCompra(w http.ResponseWriter, r *http.Request) {
 
 		// Aumentar stock y actualizar costos del producto
 		// Actualizamos costo_unitario con el precio de la última compra
-		_, err = tx.Exec(`UPDATE productos SET stock = stock + ?, costo_unitario = ?, precio = ? WHERE id = ?`, 
+		_, err = tx.Exec(`UPDATE productos SET stock = stock + $1, costo_unitario = $2, precio = $3 WHERE id = $4`, 
 			d.Cantidad, d.PrecioUnitario, d.PrecioSugerido, d.ProductoID)
 		if err != nil {
 			tx.Rollback()
@@ -55,7 +55,7 @@ func (h *PurchaseHandler) CreateCompra(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Opcional: Registrar en inventario_movimientos
-		_, err = tx.Exec(`INSERT INTO inventario_movimientos (producto_id, tipo, cantidad, motivo) VALUES (?, ?, ?, ?)`,
+		_, err = tx.Exec(`INSERT INTO inventario_movimientos (producto_id, tipo, cantidad, motivo) VALUES ($1, $2, $3, $4)`,
 			d.ProductoID, "Entrada", d.Cantidad, "Compra ID: "+c.ID)
 		if err != nil {
 			tx.Rollback()
@@ -65,7 +65,7 @@ func (h *PurchaseHandler) CreateCompra(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3. Registrar el egreso financiero
-	_, err = tx.Exec(`INSERT INTO movimientos_financieros (tipo, categoria, monto, metodo_pago, descripcion) VALUES (?, ?, ?, ?, ?)`,
+	_, err = tx.Exec(`INSERT INTO movimientos_financieros (tipo, categoria, monto, metodo_pago, descripcion) VALUES ($1, $2, $3, $4, $5)`,
 		"Egreso", "Proveedor", c.Total, c.MetodoPago, "Compra ID: "+c.ID)
 	if err != nil {
 		tx.Rollback()
@@ -99,7 +99,7 @@ func (h *PurchaseHandler) GetCompras(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Obtener detalles de la compra
-		detailRows, err := h.DB.Query(`SELECT id, producto_id, cantidad, precio_unitario, precio_sugerido, subtotal FROM compra_detalles WHERE compra_id = ?`, c.ID)
+		detailRows, err := h.DB.Query(`SELECT id, producto_id, cantidad, precio_unitario, precio_sugerido, subtotal FROM compra_detalles WHERE compra_id = $1`, c.ID)
 		if err == nil {
 			for detailRows.Next() {
 				var d models.CompraDetalle

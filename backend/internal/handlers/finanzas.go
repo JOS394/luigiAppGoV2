@@ -41,7 +41,7 @@ func (h *FinanceHandler) CreateMovimiento(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	_, err := h.DB.Exec(`INSERT INTO movimientos_financieros (tipo, categoria, monto, metodo_pago, descripcion, referencia) VALUES (?, ?, ?, ?, ?, ?)`,
+	_, err := h.DB.Exec(`INSERT INTO movimientos_financieros (tipo, categoria, monto, metodo_pago, descripcion, referencia) VALUES ($1, $2, $3, $4, $5, $6)`,
 		m.Tipo, m.Categoria, m.Monto, m.MetodoPago, m.Descripcion, m.Referencia)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al insertar movimiento: "+err.Error())
@@ -59,7 +59,7 @@ func (h *FinanceHandler) UpdateMovimiento(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	_, err := h.DB.Exec(`UPDATE movimientos_financieros SET tipo = ?, categoria = ?, monto = ?, metodo_pago = ?, descripcion = ?, referencia = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+	_, err := h.DB.Exec(`UPDATE movimientos_financieros SET tipo = $1, categoria = $2, monto = $3, metodo_pago = $4, descripcion = $5, referencia = $6, updated_at = CURRENT_TIMESTAMP WHERE id = $7`,
 		m.Tipo, m.Categoria, m.Monto, m.MetodoPago, m.Descripcion, m.Referencia, id)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al actualizar movimiento: "+err.Error())
@@ -71,7 +71,7 @@ func (h *FinanceHandler) UpdateMovimiento(w http.ResponseWriter, r *http.Request
 
 func (h *FinanceHandler) DeleteMovimiento(w http.ResponseWriter, r *http.Request) {
 	id := getID(r)
-	_, err := h.DB.Exec(`UPDATE movimientos_financieros SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?`, id)
+	_, err := h.DB.Exec(`UPDATE movimientos_financieros SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1`, id)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al eliminar movimiento: "+err.Error())
 		return

@@ -88,7 +88,10 @@ const downloader = async (endpoint: string, filename: string) => {
 const mapProductoFromBackend = (p: any): Producto => {
   // Debug para ver qué llega del backend
   const id = p.id || p.ID || p.Id;
-  if (!id) console.error("⚠️ Producto recibido sin ID:", p);
+  if (!id) {
+    console.error("⚠️ Producto recibido sin ID:", p);
+    console.warn("Estructura de p:", Object.keys(p));
+  }
 
   return {
     id: id,

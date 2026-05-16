@@ -40,7 +40,7 @@ func (h *ProviderHandler) CreateProveedor(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	_, err := h.DB.Exec(`INSERT INTO proveedores (id, nombre, email, telefono, direccion) VALUES (?, ?, ?, ?, ?)`,
+	_, err := h.DB.Exec(`INSERT INTO proveedores (id, nombre, email, telefono, direccion) VALUES ($1, $2, $3, $4, $5)`,
 		p.ID, p.Nombre, p.Email, p.Telefono, p.Direccion)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al insertar proveedor: "+err.Error())
@@ -58,7 +58,7 @@ func (h *ProviderHandler) UpdateProveedor(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	_, err := h.DB.Exec(`UPDATE proveedores SET nombre = ?, email = ?, telefono = ?, direccion = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL`,
+	_, err := h.DB.Exec(`UPDATE proveedores SET nombre = $1, email = $2, telefono = $3, direccion = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5 AND deleted_at IS NULL`,
 		p.Nombre, p.Email, p.Telefono, p.Direccion, id)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al actualizar proveedor: "+err.Error())
@@ -70,7 +70,7 @@ func (h *ProviderHandler) UpdateProveedor(w http.ResponseWriter, r *http.Request
 
 func (h *ProviderHandler) DeleteProveedor(w http.ResponseWriter, r *http.Request) {
 	id := getID(r)
-	_, err := h.DB.Exec(`UPDATE proveedores SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?`, id)
+	_, err := h.DB.Exec(`UPDATE proveedores SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1`, id)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al eliminar proveedor: "+err.Error())
 		return

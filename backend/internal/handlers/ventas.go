@@ -33,7 +33,7 @@ func (h *VentaHandler) CreateVenta(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 1. Insertar cabecera de venta
-	_, err = tx.Exec(`INSERT INTO ventas (id, cliente, total, estado) VALUES (?, ?, ?, ?)`,
+	_, err = tx.Exec(`INSERT INTO ventas (id, cliente, total, estado) VALUES ($1, $2, $3, $4)`,
 		v.ID, v.Cliente, v.Total, v.Estado)
 	if err != nil {
 		tx.Rollback()
@@ -43,7 +43,7 @@ func (h *VentaHandler) CreateVenta(w http.ResponseWriter, r *http.Request) {
 
 	// 2. Insertar detalles y actualizar stock
 	for _, d := range v.Detalle {
-		_, err = tx.Exec(`INSERT INTO venta_detalles (venta_id, producto_id, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?)`,
+		_, err = tx.Exec(`INSERT INTO venta_detalles (venta_id, producto_id, cantidad, precio_unitario, subtotal) VALUES ($1, $2, $3, $4, $5)`,
 			v.ID, d.ProductoID, d.Cantidad, d.PrecioUnitario, d.Subtotal)
 		if err != nil {
 			tx.Rollback()
@@ -53,7 +53,7 @@ func (h *VentaHandler) CreateVenta(w http.ResponseWriter, r *http.Request) {
 
 		// Restar stock solo si es tipo 'producto'
 		var tipo string
-		err = tx.QueryRow(`SELECT tipo FROM productos WHERE id = ?`, d.ProductoID).Scan(&tipo)
+		err = tx.QueryRow(`SELECT tipo FROM productos WHERE id = $1`, d.ProductoID).Scan(&tipo)
 		if err != nil {
 			tx.Rollback()
 			errorResponse(w, http.StatusInternalServerError, "Error al verificar tipo de producto: "+err.Error())
@@ -61,7 +61,7 @@ func (h *VentaHandler) CreateVenta(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if tipo == "producto" {
-			_, err = tx.Exec(`UPDATE productos SET stock = stock - ? WHERE id = ?`, d.Cantidad, d.ProductoID)
+			_, err = tx.Exec(`UPDATE productos SET stock = stock - $1 WHERE id = $2`, d.Cantidad, d.ProductoID)
 			if err != nil {
 				tx.Rollback()
 				errorResponse(w, http.StatusInternalServerError, "Error al actualizar stock: "+err.Error())
@@ -69,7 +69,7 @@ func (h *VentaHandler) CreateVenta(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// REGISTRO EN KARDEX
-			_, err = tx.Exec(`INSERT INTO inventario_movimientos (producto_id, tipo, cantidad, motivo) VALUES (?, ?, ?, ?)`,
+			_, err = tx.Exec(`INSERT INTO inventario_movimientos (producto_id, tipo, cantidad, motivo) VALUES ($1, $2, $3, $4)`,
 				d.ProductoID, "Salida", d.Cantidad, "Venta Folio: "+v.ID)
 			if err != nil {
 				tx.Rollback()
@@ -80,7 +80,7 @@ func (h *VentaHandler) CreateVenta(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3. Registrar el ingreso financiero
-	_, err = tx.Exec(`INSERT INTO movimientos_financieros (tipo, categoria, monto, metodo_pago, descripcion) VALUES (?, ?, ?, ?, ?)`,
+	_, err = tx.Exec(`INSERT INTO movimientos_financieros (tipo, categoria, monto, metodo_pago, descripcion) VALUES ($1, $2, $3, $4, $5)`,
 		"Ingreso", "Venta", v.Total, "Efectivo", "Venta ID: "+v.ID) // Asumimos efectivo por ahora o sacamos de v
 	if err != nil {
 		tx.Rollback()
@@ -114,7 +114,7 @@ func (h *VentaHandler) GetVentas(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Obtener detalles de la venta
-		detailRows, err := h.DB.Query(`SELECT id, producto_id, cantidad, precio_unitario, subtotal FROM venta_detalles WHERE venta_id = ?`, v.ID)
+		detailRows, err := h.DB.Query(`SELECT id, producto_id, cantidad, precio_unitario, subtotal FROM venta_detalles WHERE venta_id = $1`, v.ID)
 		if err == nil {
 			for detailRows.Next() {
 				var d models.VentaDetalle
@@ -133,7 +133,7 @@ func (h *VentaHandler) GetVentas(w http.ResponseWriter, r *http.Request) {
 
 func (h *VentaHandler) DeleteVenta(w http.ResponseWriter, r *http.Request) {
 	id := getID(r)
-	_, err := h.DB.Exec(`UPDATE ventas SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?`, id)
+	_, err := h.DB.Exec(`UPDATE ventas SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1`, id)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al eliminar venta: "+err.Error())
 		return

@@ -8,10 +8,10 @@ import { useAuth } from '../../context/AuthContext';
 import { ProductGrid } from './ProductGrid';
 import { CartItem } from './CartItem';
 import { ReceiptModal } from './modals/ReceiptModal';
-import { 
-  ShoppingCart, 
-  Trash2, 
-  CreditCard, 
+import {
+  ShoppingCart,
+  Trash2,
+  CreditCard,
   Pin,
   PinOff,
   ChevronDown,
@@ -30,8 +30,8 @@ interface POSViewProps {
 }
 
 export const POSView: React.FC<POSViewProps> = ({ products, onSuccess }) => {
-  const { 
-    cart, 
+  const {
+    cart,
     discount,
     discountType,
     setDiscount,
@@ -49,7 +49,7 @@ export const POSView: React.FC<POSViewProps> = ({ products, onSuccess }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastVenta, setLastVenta] = useState<Venta | null>(null);
-  
+
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
   const prevCountRef = useRef(cartCount);
 
@@ -68,7 +68,7 @@ export const POSView: React.FC<POSViewProps> = ({ products, onSuccess }) => {
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
-    
+
     setIsSubmitting(true);
     try {
       const ventaData = {
@@ -84,11 +84,11 @@ export const POSView: React.FC<POSViewProps> = ({ products, onSuccess }) => {
       };
 
       const nuevaVenta = await apiService.ventas.create(ventaData);
-      
+
       toast.success('Venta registrada con éxito');
       setLastVenta(nuevaVenta);
       setShowReceipt(true);
-      
+
       clearCart();
       setClienteNombre('Cliente General');
       setIsExpanded(false);
@@ -111,14 +111,14 @@ export const POSView: React.FC<POSViewProps> = ({ products, onSuccess }) => {
 
       {/* Backdrop */}
       {isExpanded && (
-        <div 
+        <div
           className="fixed inset-0 bg-neutral/40 backdrop-blur-sm z-40 animate-in fade-in duration-300"
           onClick={() => setIsExpanded(false)}
         />
       )}
 
       {/* Cart Sidebar / Panel */}
-      <div 
+      <div
         className={`
           fixed z-50 bg-white flex flex-col transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
           
@@ -129,8 +129,8 @@ export const POSView: React.FC<POSViewProps> = ({ products, onSuccess }) => {
           lg:left-auto lg:right-0 lg:h-full lg:shadow-none lg:rounded-none
           
           /* Lógica de ocultamiento/fijado en Desktop */
-          ${isPinned 
-            ? 'lg:static lg:w-[400px] lg:border-l lg:border-slate-200 lg:translate-x-0' 
+          ${isPinned
+            ? 'lg:static lg:w-[400px] lg:border-l lg:border-slate-200 lg:translate-x-0'
             : `lg:fixed lg:top-4 lg:bottom-4 lg:right-4 lg:w-[400px] lg:rounded-3xl lg:border lg:border-slate-200 lg:shadow-2xl 
                ${isExpanded ? 'lg:translate-x-0 lg:opacity-100' : 'lg:translate-x-[120%] lg:opacity-0 pointer-events-none'}`
           }
@@ -147,17 +147,17 @@ export const POSView: React.FC<POSViewProps> = ({ products, onSuccess }) => {
         {/* Header Carrito */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
           <div className="flex items-center gap-3">
-             <div className="w-8 h-8 bg-primary text-white rounded-lg flex items-center justify-center shadow-md">
-                <ShoppingCart size={18} />
-             </div>
-             <div>
-               <h3 className="font-bold text-slate-800 text-sm uppercase tracking-tight">Venta Actual</h3>
-               <p className="text-[10px] font-medium text-slate-400 uppercase">Resumen</p>
-             </div>
+            <div className="w-8 h-8 bg-primary text-white rounded-lg flex items-center justify-center shadow-md">
+              <ShoppingCart size={18} />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-800 text-sm uppercase tracking-tight">Venta Actual</h3>
+              <p className="text-[10px] font-medium text-slate-400 uppercase">Resumen</p>
+            </div>
           </div>
 
           <div className="flex items-center gap-1">
-            <button 
+            <button
               className="hidden lg:flex btn btn-ghost btn-xs btn-square text-slate-300 hover:text-primary transition-colors"
               onClick={() => {
                 setIsPinned(!isPinned);
@@ -166,9 +166,9 @@ export const POSView: React.FC<POSViewProps> = ({ products, onSuccess }) => {
             >
               {isPinned ? <Pin size={16} /> : <PinOff size={16} />}
             </button>
-            <button className="btn btn-ghost btn-sm btn-square text-slate-400" onClick={() => setIsExpanded(false)}>
+            {/* <button className="btn btn-ghost btn-sm btn-square text-slate-400" onClick={() => setIsExpanded(false)}>
               <X size={20} />
-            </button>
+            </button> */}
           </div>
         </div>
 
@@ -178,9 +178,9 @@ export const POSView: React.FC<POSViewProps> = ({ products, onSuccess }) => {
             <Users size={12} className="text-primary" />
             <span>Cliente</span>
           </div>
-          <input 
-            type="text" 
-            placeholder="Nombre del cliente..." 
+          <input
+            type="text"
+            placeholder="Nombre del cliente..."
             className="input input-bordered input-sm w-full bg-white border-slate-200 focus:border-primary font-bold text-slate-700 rounded-xl h-10 px-4"
             value={clienteNombre}
             onChange={(e) => setClienteNombre(e.target.value)}
@@ -236,9 +236,10 @@ export const POSView: React.FC<POSViewProps> = ({ products, onSuccess }) => {
 
           <div className="flex gap-2">
             <button onClick={clearCart} disabled={cart.length === 0 || isSubmitting} className="btn btn-square btn-outline border-slate-200 bg-white text-slate-300 hover:text-red-500 rounded-xl h-12 shadow-sm"><Trash2 size={18} /></button>
-            <button 
-              onClick={handleCheckout} 
-              disabled={cart.length === 0 || isSubmitting} 
+            <button
+              onClick={handleCheckout}
+              disabled={cart.length === 0 || isSubmitting}
+              style={{ backgroundColor: '#46b128' }}
               className="btn btn-primary flex-1 rounded-xl shadow-lg shadow-primary/20 font-bold h-12 text-white uppercase tracking-widest text-xs"
             >
               {isSubmitting ? (
@@ -256,24 +257,24 @@ export const POSView: React.FC<POSViewProps> = ({ products, onSuccess }) => {
       {/* Floating Speed Dial */}
       {(!isPinned || (typeof window !== 'undefined' && window.innerWidth < 1024)) && !isExpanded && (
         <div className={`fixed bottom-8 right-8 z-40 transition-all duration-300 ${animateCart ? 'scale-110' : 'scale-100'}`}>
-           <button 
-             onClick={() => setIsExpanded(true)}
-             className={`btn btn-circle btn-primary btn-lg h-16 w-16 shadow-[0_15px_40px_rgba(70,177,40,0.4)] border-4 border-white group relative ${animateCart ? 'animate-bounce' : ''}`}
-           >
-             {animateCart && <span className="absolute inset-0 rounded-full bg-primary animate-ping opacity-75"></span>}
-             <div className="indicator">
-               {cart.length > 0 && (
-                 <span className={`indicator-item badge badge-sm bg-red-500 text-white border-white font-bold shadow-md transition-all ${animateCart ? 'scale-150' : 'scale-100'}`}>
-                   {cartCount}
-                 </span>
-               )}
-               <ShoppingCart size={28} className={`text-white transition-transform ${animateCart ? 'rotate-12' : ''}`} />
-             </div>
-           </button>
+          <button
+            onClick={() => setIsExpanded(true)}
+            className={`btn btn-circle btn-primary btn-lg h-16 w-16 shadow-[0_15px_40px_rgba(70,177,40,0.4)] border-4 border-white group relative ${animateCart ? 'animate-bounce' : ''}`}
+          >
+            {animateCart && <span className="absolute inset-0 rounded-full bg-primary animate-ping opacity-75"></span>}
+            <div className="indicator">
+              {cart.length > 0 && (
+                <span className={`indicator-item badge badge-sm bg-red-500 text-white border-white font-bold shadow-md transition-all ${animateCart ? 'scale-150' : 'scale-100'}`}>
+                  {cartCount}
+                </span>
+              )}
+              <ShoppingCart size={28} className={`text-white transition-transform ${animateCart ? 'rotate-12' : ''}`} />
+            </div>
+          </button>
         </div>
       )}
 
-      <ReceiptModal 
+      <ReceiptModal
         show={showReceipt}
         onClose={() => setShowReceipt(false)}
         venta={lastVenta}

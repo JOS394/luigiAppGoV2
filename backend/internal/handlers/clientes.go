@@ -13,7 +13,7 @@ type ClientHandler struct {
 }
 
 func (h *ClientHandler) GetClientes(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.DB.Query(`SELECT id, nombre, email, telefono, direccion, notas, total_compras, COALESCE(ultima_visita, ''), created_at, updated_at FROM clientes WHERE deleted_at IS NULL`)
+	rows, err := h.DB.Query(`SELECT id, nombre, email, telefono, direccion, notas, total_compras, COALESCE(ultima_visita::text, ''), created_at, updated_at FROM clientes WHERE deleted_at IS NULL`)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al consultar clientes: "+err.Error())
 		return
@@ -45,7 +45,7 @@ func (h *ClientHandler) CreateCliente(w http.ResponseWriter, r *http.Request) {
 		c.ID = "C-" + string(rune(1000+len(c.Nombre))) // Simplificación extrema
 	}
 
-	_, err := h.DB.Exec(`INSERT INTO clientes (id, nombre, email, telefono, direccion, notas) VALUES (?, ?, ?, ?, ?, ?)`,
+	_, err := h.DB.Exec(`INSERT INTO clientes (id, nombre, email, telefono, direccion, notas) VALUES ($1, $2, $3, $4, $5, $6)`,
 		c.ID, c.Nombre, c.Email, c.Telefono, c.Direccion, c.Notas)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al insertar cliente: "+err.Error())
@@ -63,7 +63,7 @@ func (h *ClientHandler) UpdateCliente(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := h.DB.Exec(`UPDATE clientes SET nombre = ?, email = ?, telefono = ?, direccion = ?, notas = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL`,
+	_, err := h.DB.Exec(`UPDATE clientes SET nombre = $1, email = $2, telefono = $3, direccion = $4, notas = $5, updated_at = CURRENT_TIMESTAMP WHERE id = $6 AND deleted_at IS NULL`,
 		c.Nombre, c.Email, c.Telefono, c.Direccion, c.Notas, id)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al actualizar cliente: "+err.Error())
@@ -75,7 +75,7 @@ func (h *ClientHandler) UpdateCliente(w http.ResponseWriter, r *http.Request) {
 
 func (h *ClientHandler) DeleteCliente(w http.ResponseWriter, r *http.Request) {
 	id := getID(r)
-	_, err := h.DB.Exec(`UPDATE clientes SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?`, id)
+	_, err := h.DB.Exec(`UPDATE clientes SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1`, id)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al eliminar cliente: "+err.Error())
 		return

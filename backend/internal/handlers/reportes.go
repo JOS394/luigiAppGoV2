@@ -12,12 +12,12 @@ type ReportHandler struct {
 func (h *ReportHandler) GetResumen(w http.ResponseWriter, r *http.Request) {
 	// Ventas de hoy
 	var ventasHoy float64
-	queryHoy := `SELECT COALESCE(SUM(total), 0) FROM ventas WHERE date(fecha) = date('now') AND deleted_at IS NULL`
+	queryHoy := `SELECT COALESCE(SUM(total), 0) FROM ventas WHERE fecha::date = CURRENT_DATE AND deleted_at IS NULL`
 	h.DB.QueryRow(queryHoy).Scan(&ventasHoy)
 
 	// Ventas de ayer (para calcular crecimiento)
 	var ventasAyer float64
-	queryAyer := `SELECT COALESCE(SUM(total), 0) FROM ventas WHERE date(fecha) = date('now', '-1 day') AND deleted_at IS NULL`
+	queryAyer := `SELECT COALESCE(SUM(total), 0) FROM ventas WHERE fecha::date = CURRENT_DATE - INTERVAL '1 day' AND deleted_at IS NULL`
 	h.DB.QueryRow(queryAyer).Scan(&ventasAyer)
 
 	// Crecimiento
@@ -39,7 +39,7 @@ func (h *ReportHandler) GetResumen(w http.ResponseWriter, r *http.Request) {
 			COALESCE(SUM(CASE WHEN tipo = 'Ingreso' THEN monto ELSE 0 END), 0),
 			COALESCE(SUM(CASE WHEN tipo = 'Egreso' THEN monto ELSE 0 END), 0)
 		FROM movimientos_financieros
-		WHERE deleted_at IS NULL AND strftime('%m-%Y', fecha) = strftime('%m-%Y', 'now')
+		WHERE deleted_at IS NULL AND to_char(fecha, 'MM-YYYY') = to_char(CURRENT_TIMESTAMP, 'MM-YYYY')
 	`
 	h.DB.QueryRow(queryFinanzas).Scan(&ingresos, &egresos)
 
@@ -80,9 +80,9 @@ func (h *ReportHandler) GetDetallado(w http.ResponseWriter, r *http.Request) {
 
 	// 2. Ventas por día de la última semana
 	querySemana := `
-		SELECT strftime('%w', fecha) as dia_sem, SUM(total) as monto
+		SELECT EXTRACT(DOW FROM fecha) as dia_sem, SUM(total) as monto
 		FROM ventas
-		WHERE fecha >= date('now', '-7 days') AND deleted_at IS NULL
+		WHERE fecha >= CURRENT_DATE - INTERVAL '7 days' AND deleted_at IS NULL
 		GROUP BY dia_sem
 		ORDER BY dia_sem ASC
 	`

@@ -18,8 +18,8 @@ func main() {
 	createAdmin := flag.Bool("create-admin", false, "Crea un usuario administrador inicial")
 	flag.Parse()
 
-	// 1. Conexión a Base de Datos
-	db, err := database.Connect("./luigiapp.db")
+	// 1. Conexión a Base de Datos (PostgreSQL)
+	db, err := database.Connect("postgres://postgres:password@localhost:5432/luigiapp?sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -40,7 +40,7 @@ func main() {
 	app := &application{db: db}
 
 	// 4. Iniciar Servidor
-	log.Println("🚀 Servidor LuigiApp V3 en http://localhost:8080")
+	log.Println("🚀 Servidor LuigiApp V3 (PostgreSQL) en http://localhost:8080")
 	err = http.ListenAndServe(":8080", app.routes())
 	if err != nil {
 		log.Fatal(err)
@@ -59,7 +59,7 @@ func createInitialAdmin(db *sql.DB) {
 
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
-	_, err := db.Exec(`INSERT INTO usuarios (id, nombre, email, password_hash, rol) VALUES (?, ?, ?, ?, ?)`,
+	_, err := db.Exec(`INSERT INTO usuarios (id, nombre, email, password_hash, rol) VALUES ($1, $2, $3, $4, $5)`,
 		"U-ADMIN", nombre, email, string(hashedPassword), rol)
 
 	if err != nil {

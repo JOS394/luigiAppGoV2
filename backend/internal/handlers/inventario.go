@@ -45,11 +45,11 @@ func (h *InventoryHandler) UpdateStock(w http.ResponseWriter, r *http.Request) {
 	// 1. Actualizar el stock en la tabla productos
 	var query string
 	if input.Tipo == "Entrada" {
-		query = `UPDATE productos SET stock = stock + ? WHERE id = ?`
+		query = `UPDATE productos SET stock = stock + $1 WHERE id = $2`
 	} else if input.Tipo == "Salida" {
-		query = `UPDATE productos SET stock = stock - ? WHERE id = ?`
+		query = `UPDATE productos SET stock = stock - $1 WHERE id = $2`
 	} else { // Ajuste
-		query = `UPDATE productos SET stock = ? WHERE id = ?`
+		query = `UPDATE productos SET stock = $1 WHERE id = $2`
 	}
 
 	_, err = tx.Exec(query, input.Cantidad, id)
@@ -60,7 +60,7 @@ func (h *InventoryHandler) UpdateStock(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 2. Registrar en inventario_movimientos
-	_, err = tx.Exec(`INSERT INTO inventario_movimientos (producto_id, tipo, cantidad, motivo) VALUES (?, ?, ?, ?)`,
+	_, err = tx.Exec(`INSERT INTO inventario_movimientos (producto_id, tipo, cantidad, motivo) VALUES ($1, $2, $3, $4)`,
 		id, input.Tipo, input.Cantidad, input.Motivo)
 	if err != nil {
 		tx.Rollback()
@@ -95,7 +95,7 @@ func (h *InventoryHandler) GetMovimientosByProducto(w http.ResponseWriter, r *ht
 		return
 	}
 
-	rows, err := h.DB.Query(`SELECT id, producto_id, tipo, cantidad, motivo, fecha FROM inventario_movimientos WHERE producto_id = ? ORDER BY fecha DESC`, id)
+	rows, err := h.DB.Query(`SELECT id, producto_id, tipo, cantidad, motivo, fecha FROM inventario_movimientos WHERE producto_id = $1 ORDER BY fecha DESC`, id)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al consultar historial: "+err.Error())
 		return
