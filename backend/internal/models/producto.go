@@ -9,7 +9,7 @@ type Producto struct {
 	Stock              int     `json:"stock"`
 	Categoria          string  `json:"categoria"`
 	Tipo               string  `json:"tipo"` // 'producto' o 'servicio'
-	CodigoBarras       string  `json:"codigo_barras"`
+	CodigoBarras       *string  `json:"codigo_barras"`
 	Ubicacion          string  `json:"ubicacion"`
 	UbicacionEspecifica string  `json:"ubicacion_especifica"`
 	ImagenURL          string  `json:"imagen_url"`

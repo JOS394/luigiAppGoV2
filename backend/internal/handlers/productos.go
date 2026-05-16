@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -31,15 +32,42 @@ func (h *ProductHandler) GetProductos(w http.ResponseWriter, r *http.Request) {
 	// 3. Iterar sobre las filas
 	for rows.Next() {
 		var p models.Producto
-		err := rows.Scan(&p.ID, &p.Nombre, &p.Precio, &p.Costo, &p.CostoUnitario, &p.Stock, &p.Categoria, &p.Tipo, &p.CodigoBarras, &p.Ubicacion, &p.UbicacionEspecifica, &p.ImagenURL, &p.CreatedAt, &p.UpdatedAt, &p.DeletedAt)
+		var id, nombre, categoria, tipo, codigoBarras, ubicacion, ubiEspe, img, created, updated sql.NullString
+		var precio, costo, costoU sql.NullFloat64
+		var stock sql.NullInt64
+		var deleted sql.NullString
+
+		err := rows.Scan(&id, &nombre, &precio, &costo, &costoU, &stock, &categoria, &tipo, &codigoBarras, &ubicacion, &ubiEspe, &img, &created, &updated, &deleted)
 		if err != nil {
-			errorResponse(w, http.StatusInternalServerError, "Error al leer fila: "+err.Error())
-			return
+			log.Printf("❌ Error scanneando fila: %v", err)
+			continue
 		}
+
+		p.ID = id.String
+		p.Nombre = nombre.String
+		p.Precio = precio.Float64
+		p.Costo = costo.Float64
+		p.CostoUnitario = costoU.Float64
+		p.Stock = int(stock.Int64)
+		p.Categoria = categoria.String
+		p.Tipo = tipo.String
+		if codigoBarras.Valid {
+			p.CodigoBarras = &codigoBarras.String
+		}
+		p.Ubicacion = ubicacion.String
+		p.UbicacionEspecifica = ubiEspe.String
+		p.ImagenURL = img.String
+		p.CreatedAt = created.String
+		p.UpdatedAt = updated.String
+		if deleted.Valid {
+			p.DeletedAt = &deleted.String
+		}
+
 		productos = append(productos, p)
 	}
 
 	// 4. Responder con el JSON
+	log.Printf("📦 Enviando %d productos al frontend", len(productos))
 	jsonResponse(w, http.StatusOK, productos)
 }
 

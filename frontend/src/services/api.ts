@@ -86,8 +86,12 @@ const downloader = async (endpoint: string, filename: string) => {
 
 // Mapeadores para convertir entre Backend (snake_case) y Frontend (camelCase)
 const mapProductoFromBackend = (p: any): Producto => {
+  // Debug para ver qué llega del backend
+  const id = p.id || p.ID || p.Id;
+  if (!id) console.error("⚠️ Producto recibido sin ID:", p);
+
   return {
-    id: p.id,
+    id: id,
     nombre: p.nombre,
     precio: p.precio,
     stock: p.stock,
@@ -247,7 +251,7 @@ export const apiService = {
     },
     ajustarStock: async (data: { productoId: string, cantidad: number, tipo: 'Entrada' | 'Salida' | 'Ajuste', motivo: string }): Promise<void> => {
 
-      if (!data.productoId) throw new Error("ID del producto es requerido");
+      if (!data.productoId) throw new Error("[Frontend] ID del producto no encontrado en la petición");
       await fetcher(`/productos/${data.productoId}/stock`, {
         method: 'POST',
         body: JSON.stringify({

@@ -54,12 +54,19 @@ export default function InventarioPage() {
     fetchData();
   }, []);
 
-  const handleAdjustStock = async (data: { cantidad: number, tipo: 'Entrada' | 'Salida', motivo: string }) => {
-    if (!selectedProducto) return;
+  const handleAdjustStock = async (data: { productoId: string, cantidad: number, tipo: 'Entrada' | 'Salida', motivo: string }) => {
+    // Si el modal no manda ID, usamos el del producto seleccionado en el estado
+    const finalId = data.productoId || selectedProducto?.id;
+
+    if (!finalId) {
+      toast.error('Error: No hay un producto seleccionado para ajustar');
+      return;
+    }
+
     try {
       await apiService.inventario.ajustarStock({
-        productoId: selectedProducto.id,
-        ...data
+        ...data,
+        productoId: finalId
       });
       toast.success('Ajuste de inventario aplicado');
       setShowAdjustmentModal(false);
@@ -180,8 +187,8 @@ export default function InventarioPage() {
       {/* Vista de Inventario */}
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((p) => (
-            <div key={p.id} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4 hover:border-primary/30 transition-colors">
+          {filtered.map((p, idx) => (
+            <div key={p.id || `grid-${idx}`} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4 hover:border-primary/30 transition-colors">
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-3">
                   <div className="w-14 h-14 bg-slate-100 rounded-2xl overflow-hidden flex items-center justify-center text-slate-400 border border-slate-200">
@@ -197,7 +204,10 @@ export default function InventarioPage() {
                 </div>
                 <TableActions 
                   actions={[
-                    { label: 'Ajustar Stock', icon: <ArrowUpDown />, onClick: () => { setSelectedProducto(p); setShowAdjustmentModal(true); } },
+                    { label: 'Ajustar Stock', icon: <ArrowUpDown />, onClick: () => { 
+                      setSelectedProducto(p); 
+                      setTimeout(() => setShowAdjustmentModal(true), 0); 
+                    } },
                     { label: 'Ver Historial', icon: <History />, onClick: () => openHistory(p) },
                   ]}
                 />
@@ -240,8 +250,8 @@ export default function InventarioPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {filtered.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
+                {filtered.map((p, idx) => (
+                  <tr key={p.id || `row-${idx}`} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="px-8 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center text-slate-400 border border-slate-200">
@@ -272,7 +282,10 @@ export default function InventarioPage() {
                     <td className="px-8 text-right">
                       <TableActions 
                         actions={[
-                          { label: 'Ajustar Stock', icon: <ArrowUpDown />, onClick: () => { setSelectedProducto(p); setShowAdjustmentModal(true); } },
+                          { label: 'Ajustar Stock', icon: <ArrowUpDown />, onClick: () => { 
+                            setSelectedProducto(p); 
+                            setTimeout(() => setShowAdjustmentModal(true), 0); 
+                          } },
                           { label: 'Ver Historial', icon: <History />, onClick: () => openHistory(p) },
                         ]}
                       />

@@ -42,6 +42,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ show, onClose, venta
 
           {/* ÁREA DE IMPRESIÓN (CONTENIDO DEL TICKET) */}
           <div 
+            id="print-area"
             ref={printRef}
             className="bg-white p-6 shadow-xl border border-slate-100 rounded-lg font-mono text-[12px] text-slate-800 mx-auto"
             style={{ width: '100%', maxWidth: '300px' }}
@@ -124,29 +125,53 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ show, onClose, venta
       </div>
 
       {/* ESTILOS CSS PARA IMPRESIÓN SOLAMENTE DEL TICKET */}
-      <style jsx global>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @media print {
+          /* Ocultar todo por defecto */
           body * {
-            visibility: hidden;
+            visibility: hidden !important;
           }
-          .print\\:hidden {
-            display: none !important;
-          }
+          
+          /* Mostrar el área de impresión y sus descendientes */
           #print-area, #print-area * {
-            visibility: visible;
+            visibility: visible !important;
           }
-          /* Forzamos a que el div del ticket sea el único visible y esté al inicio */
-          ${printRef.current ? `
-            div { border: none !important; shadow: none !important; }
-            div:has(> ref) { position: absolute; left: 0; top: 0; }
-          ` : ''}
+          
+          /* Posicionar el ticket en el origen de la página */
+          #print-area {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 80mm !important;
+            margin: 0 !important;
+            padding: 5mm !important;
+            background: white !important;
+            box-shadow: none !important;
+            border: none !important;
+          }
+
+          /* Forzar que el body no tenga color de fondo y ocupe el ancho del ticket */
+          body {
+            background: white !important;
+            width: 80mm !important;
+          }
+
+          /* Eliminar márgenes de página y headers/footers del navegador */
           @page {
             margin: 0;
             size: 80mm auto;
           }
-          footer, header, nav, .modal-backdrop { display: none !important; }
+
+          /* Ocultar elementos que podrían dejar espacios en blanco o interferir */
+          .print\\:hidden, 
+          button, 
+          .modal-backdrop,
+          header,
+          nav {
+            display: none !important;
+          }
         }
-      `}</style>
+      `}} />
     </div>
   );
 };

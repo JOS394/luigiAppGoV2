@@ -8,7 +8,7 @@ interface StockAdjustmentModalProps {
   show: boolean;
   onClose: () => void;
   producto: Producto | null;
-  onSubmit: (data: { cantidad: number, tipo: 'Entrada' | 'Salida', motivo: string }) => void;
+  onSubmit: (data: { productoId: string, cantidad: number, tipo: 'Entrada' | 'Salida', motivo: string }) => void;
 }
 
 export function StockAdjustmentModal({ show, onClose, producto, onSubmit }: StockAdjustmentModalProps) {
@@ -20,8 +20,9 @@ export function StockAdjustmentModal({ show, onClose, producto, onSubmit }: Stoc
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cantidad || !motivo) return;
+    if (!cantidad || !motivo || !producto) return;
     onSubmit({
+      productoId: producto.id,
       cantidad: parseInt(cantidad),
       tipo,
       motivo
@@ -45,7 +46,9 @@ export function StockAdjustmentModal({ show, onClose, producto, onSubmit }: Stoc
               </div>
               <div>
                 <h3 className="text-lg font-bold text-slate-800 uppercase tracking-tight">Ajustar Inventario</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{producto.nombre}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  {producto.nombre} <span className="text-primary/50 ml-2">ID: {producto.id}</span>
+                </p>
               </div>
             </div>
             <button type="button" onClick={onClose} className="btn btn-ghost btn-sm btn-square text-slate-400"><X size={20}/></button>

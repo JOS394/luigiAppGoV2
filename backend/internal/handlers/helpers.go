@@ -29,17 +29,19 @@ func getID(r *http.Request) string {
 	if id != "" {
 		return id
 	}
-	// Fallback manual por si el router no está capturando bien el path value
+
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	if len(parts) > 0 {
-		last := parts[len(parts)-1]
-		if last != "productos" && last != "ventas" && last != "proveedores" && last != "stock" && last != "upload" {
-			return last
-		}
-		// Si el último es 'stock' o 'upload', el ID es el penúltimo
-		if (last == "stock" || last == "upload") && len(parts) >= 3 {
-			return parts[len(parts)-2]
+	// Buscar el índice de "productos", "ventas", etc.
+	for i, part := range parts {
+		if (part == "productos" || part == "clientes" || part == "proveedores") && i+1 < len(parts) {
+			// El siguiente segmento debería ser el ID
+			nextPart := parts[i+1]
+			// Si el siguiente no es una sub-ruta conocida, es el ID
+			if nextPart != "alertas" && nextPart != "valor-inventario" {
+				return nextPart
+			}
 		}
 	}
+
 	return ""
 }

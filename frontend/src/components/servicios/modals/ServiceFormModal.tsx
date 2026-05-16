@@ -40,11 +40,16 @@ export function ServiceFormModal({ show, onClose, onSubmit, initialData }: Servi
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({
+    const serviceData = {
       ...formData,
+      id: initialData?.id || `S-${Math.floor(Math.random() * 100000)}`,
       precio: parseFloat(formData.precio),
+      costo: 0,
+      costo_unitario: 0,
       stock: 999999, // Stock infinito para servicios
-    });
+      codigo_barras: null, // Evitar conflicto de UNIQUE constraint en la DB
+    };
+    onSubmit(serviceData);
   };
 
   return (
