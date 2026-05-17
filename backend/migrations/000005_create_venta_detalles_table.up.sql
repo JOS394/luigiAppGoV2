@@ -1,8 +1,8 @@
 -- migrations/000005_create_venta_detalles_table.up.sql
 CREATE TABLE IF NOT EXISTS venta_detalles (
-    id SERIAL PRIMARY KEY,
-    venta_id TEXT,
-    producto_id TEXT,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    venta_id UUID,
+    producto_id UUID,
     cantidad INTEGER NOT NULL,
     precio_unitario DOUBLE PRECISION NOT NULL,
     subtotal DOUBLE PRECISION NOT NULL,

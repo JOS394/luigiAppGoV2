@@ -1,6 +1,6 @@
 -- migrations/000001_create_usuarios_table.up.sql
 CREATE TABLE IF NOT EXISTS usuarios (
-    id TEXT PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nombre TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,

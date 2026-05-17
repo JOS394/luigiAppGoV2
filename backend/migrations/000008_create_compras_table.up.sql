@@ -1,7 +1,7 @@
 -- migrations/000008_create_compras_table.up.sql
 CREATE TABLE IF NOT EXISTS compras (
-    id TEXT PRIMARY KEY,
-    proveedor_id TEXT,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    proveedor_id UUID,
     total DOUBLE PRECISION NOT NULL,
     metodo_pago TEXT,
     fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

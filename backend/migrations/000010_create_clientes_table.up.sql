@@ -1,6 +1,6 @@
 -- migrations/000010_create_clientes_table.up.sql
 CREATE TABLE IF NOT EXISTS clientes (
-    id TEXT PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nombre TEXT NOT NULL,
     email TEXT,
     telefono TEXT,

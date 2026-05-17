@@ -1,6 +1,6 @@
 -- migrations/000006_create_movimientos_financieros_table.up.sql
 CREATE TABLE IF NOT EXISTS movimientos_financieros (
-    id SERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tipo TEXT CHECK(tipo IN ('Ingreso', 'Egreso')),
     categoria TEXT,
     monto DOUBLE PRECISION NOT NULL,

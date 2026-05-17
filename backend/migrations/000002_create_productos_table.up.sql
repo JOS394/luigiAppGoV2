@@ -1,6 +1,6 @@
 -- migrations/000002_create_productos_table.up.sql
 CREATE TABLE IF NOT EXISTS productos (
-    id TEXT PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nombre TEXT NOT NULL,
     precio DOUBLE PRECISION NOT NULL,
     costo DOUBLE PRECISION NOT NULL,

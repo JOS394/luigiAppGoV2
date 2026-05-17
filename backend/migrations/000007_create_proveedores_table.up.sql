@@ -1,6 +1,6 @@
 -- migrations/000007_create_proveedores_table.up.sql
 CREATE TABLE IF NOT EXISTS proveedores (
-    id TEXT PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nombre TEXT NOT NULL,
     email TEXT,
     telefono TEXT,

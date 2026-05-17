@@ -19,7 +19,7 @@ func main() {
 	flag.Parse()
 
 	// 1. Conexión a Base de Datos (PostgreSQL)
-	db, err := database.Connect("postgres://postgres:password@localhost:5432/luigiapp?sslmode=disable")
+	db, err := database.Connect("postgres://postgres:admin@localhost:5432/luigiapp?sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
 	}
