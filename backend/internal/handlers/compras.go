@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/JOS394/luigiAppGoV2/internal/models"
+	"github.com/google/uuid"
 )
 
 type PurchaseHandler struct {
@@ -19,6 +20,10 @@ func (h *PurchaseHandler) CreateCompra(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if c.ID == "" {
+		c.ID = uuid.New().String()
+	}
+
 	tx, err := h.DB.Begin()
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "No se pudo iniciar la transacción")
@@ -26,8 +31,8 @@ func (h *PurchaseHandler) CreateCompra(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 1. Insertar cabecera de compra
-	_, err = tx.Exec(`INSERT INTO compras (id, proveedor_id, total, metodo_pago) VALUES ($1, $2, $3, $4)`,
-		c.ID, c.ProveedorID, c.Total, c.MetodoPago)
+	_, err = tx.Exec(`INSERT INTO compras (id, proveedor_id, total_neto, impuesto, total_total, metodo_pago) VALUES ($1, $2, $3, $4, $5, $6)`,
+		c.ID, c.ProveedorID, c.TotalNeto, c.Impuesto, c.TotalTotal, c.MetodoPago)
 	if err != nil {
 		tx.Rollback()
 		errorResponse(w, http.StatusInternalServerError, "Error al insertar compra: "+err.Error())
@@ -65,8 +70,8 @@ func (h *PurchaseHandler) CreateCompra(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3. Registrar el egreso financiero
-	_, err = tx.Exec(`INSERT INTO movimientos_financieros (tipo, categoria, monto, metodo_pago, descripcion) VALUES ($1, $2, $3, $4, $5)`,
-		"Egreso", "Proveedor", c.Total, c.MetodoPago, "Compra ID: "+c.ID)
+	_, err = tx.Exec(`INSERT INTO movimientos_financieros (tipo, categoria, monto, metodo_pago, descripcion, referencia) VALUES ($1, $2, $3, $4, $5, $6)`,
+		"Egreso", "Proveedor", c.TotalTotal, c.MetodoPago, "Compra ID: "+c.ID, c.ID)
 	if err != nil {
 		tx.Rollback()
 		errorResponse(w, http.StatusInternalServerError, "Error al registrar egreso financiero: "+err.Error())
@@ -82,7 +87,7 @@ func (h *PurchaseHandler) CreateCompra(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *PurchaseHandler) GetCompras(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.DB.Query(`SELECT id, fecha, proveedor_id, total, metodo_pago, created_at, updated_at, deleted_at FROM compras WHERE deleted_at IS NULL ORDER BY fecha DESC`)
+	rows, err := h.DB.Query(`SELECT id, proveedor_id, total_neto, impuesto, total_total, metodo_pago, fecha_compra, created_at, updated_at, deleted_at FROM compras WHERE deleted_at IS NULL ORDER BY fecha_compra DESC`)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al obtener compras: "+err.Error())
 		return
@@ -93,7 +98,7 @@ func (h *PurchaseHandler) GetCompras(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var c models.Compra
 		c.Detalles = []models.CompraDetalle{} // Inicializar detalles también
-		if err := rows.Scan(&c.ID, &c.Fecha, &c.ProveedorID, &c.Total, &c.MetodoPago, &c.CreatedAt, &c.UpdatedAt, &c.DeletedAt); err != nil {
+		if err := rows.Scan(&c.ID, &c.ProveedorID, &c.TotalNeto, &c.Impuesto, &c.TotalTotal, &c.MetodoPago, &c.FechaCompra, &c.CreatedAt, &c.UpdatedAt, &c.DeletedAt); err != nil {
 			errorResponse(w, http.StatusInternalServerError, "Error al escanear compras: "+err.Error())
 			return
 		}

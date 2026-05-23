@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/JOS394/luigiAppGoV2/internal/models"
+	"github.com/google/uuid"
 )
 
 type FinanceHandler struct {
@@ -14,7 +15,7 @@ type FinanceHandler struct {
 }
 
 func (h *FinanceHandler) GetMovimientos(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.DB.Query(`SELECT id, fecha, tipo, categoria, monto, metodo_pago, descripcion, COALESCE(referencia, '') FROM movimientos_financieros WHERE deleted_at IS NULL ORDER BY fecha DESC`)
+	rows, err := h.DB.Query(`SELECT id, fecha, tipo, categoria, monto, metodo_pago, descripcion, referencia, venta_id, created_at, updated_at, deleted_at FROM movimientos_financieros WHERE deleted_at IS NULL ORDER BY fecha DESC`)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al consultar movimientos: "+err.Error())
 		return
@@ -24,10 +25,20 @@ func (h *FinanceHandler) GetMovimientos(w http.ResponseWriter, r *http.Request) 
 	movimientos := []models.MovimientoFinanciero{}
 	for rows.Next() {
 		var m models.MovimientoFinanciero
-		err := rows.Scan(&m.ID, &m.Fecha, &m.Tipo, &m.Categoria, &m.Monto, &m.MetodoPago, &m.Descripcion, &m.Referencia)
+		var descripcion, referencia, ventaID sql.NullString
+		err := rows.Scan(&m.ID, &m.Fecha, &m.Tipo, &m.Categoria, &m.Monto, &m.MetodoPago, &descripcion, &referencia, &ventaID, &m.CreatedAt, &m.UpdatedAt, &m.DeletedAt)
 		if err != nil {
 			errorResponse(w, http.StatusInternalServerError, "Error al leer fila: "+err.Error())
 			return
+		}
+		if descripcion.Valid {
+			m.Descripcion = &descripcion.String
+		}
+		if referencia.Valid {
+			m.Referencia = &referencia.String
+		}
+		if ventaID.Valid {
+			m.VentaID = &ventaID.String
 		}
 		movimientos = append(movimientos, m)
 	}
@@ -41,8 +52,12 @@ func (h *FinanceHandler) CreateMovimiento(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	_, err := h.DB.Exec(`INSERT INTO movimientos_financieros (tipo, categoria, monto, metodo_pago, descripcion, referencia) VALUES ($1, $2, $3, $4, $5, $6)`,
-		m.Tipo, m.Categoria, m.Monto, m.MetodoPago, m.Descripcion, m.Referencia)
+	if m.ID == "" {
+		m.ID = uuid.New().String()
+	}
+
+	_, err := h.DB.Exec(`INSERT INTO movimientos_financieros (id, tipo, categoria, monto, metodo_pago, descripcion, referencia, venta_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		m.ID, m.Tipo, m.Categoria, m.Monto, m.MetodoPago, m.Descripcion, m.Referencia, m.VentaID)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al insertar movimiento: "+err.Error())
 		return

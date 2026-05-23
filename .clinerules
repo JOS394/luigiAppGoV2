@@ -1,0 +1,41 @@
+# Reglas de Proyecto: LuigiAppV3 (Go + React + PostgreSQL)
+
+## Stack Tecnológico
+- **Backend**: Go (Golang) utilizando PostgreSQL (`database/sql` con driver `pgx/v5`).
+- **Migraciones**: Manejadas por `golang-migrate` en la carpeta `backend/migrations/`.
+- **Frontend**: React + TypeScript + Vite + Tailwind CSS.
+
+## Estándares de Diseño y Base de Datos (PostgreSQL)
+1. **Identificadores**:
+   - Todas las llaves primarias (`id`) y foráneas (`*_id`) deben usar `UUID`.
+   - Si no se recibe del cliente, se debe generar un UUID válido en Go usando `github.com/google/uuid` (`uuid.New().String()`) o confiar en el valor por defecto de la base de datos (`DEFAULT gen_random_uuid()`).
+   - Queda prohibida la generación de IDs temporales tipo texto (`"C-..."`, `"U-..."`, etc.).
+2. **Tipos de Datos y Mapeos**:
+   - **Monetarios/Costos/Totales**: Utilizar `float64` en Go y `DOUBLE PRECISION` en PostgreSQL.
+   - **Fechas/Marcas de Tiempo**: Utilizar `time.Time` o `*time.Time` (si es anulable en la DB).
+   - **Campos Opcionales**: Representar en Go con tipos puntero (`*string`, `*time.Time`) para evitar problemas con valores `NULL` en base de datos.
+
+## Estándares para Go Structs (Models)
+1. **JSON Tags**:
+   - Todos los structs expuestos en el API deben tener etiquetas JSON en formato `snake_case` (ej. `json:"created_at"`).
+2. **Seguridad**:
+   - Ocultar campos sensibles de los JSONs agregando la etiqueta `json:"-"` (ej. en `PasswordHash` o tokens).
+3. **Validación**:
+   - Añadir etiquetas de validación `validate:"..."` a los campos según estas reglas:
+     - Campos `NOT NULL` en DB -> `validate:"required"`.
+     - Campos de correo -> `validate:"email"` (o `validate:"omitempty,email"` si es opcional).
+     - Campos de cantidad -> `validate:"gt=0"` (mayor que 0).
+
+## Convenciones en Handlers (Controladores)
+1. **Manejo de Valores Nulos (NULLs)**:
+   - Al escanear con `rows.Scan` campos que sean anulables en la base de datos, siempre escanear a variables temporales de tipo `sql.NullString` o `sql.NullTime` antes de asignar su valor a los punteros correspondientes del struct de Go. Esto previene pánicos por punteros nulos en tiempo de ejecución.
+2. **Consultas SQL**:
+   - Utilizar únicamente marcadores de posición posicionales de Postgres (`$1`, `$2`, etc.) en lugar de marcadores de SQLite (`?`).
+3. **Transacciones**:
+   - Para operaciones que afecten múltiples tablas (como el registro de ventas con sus detalles y egresos/ingresos financieros), utilizar transacciones (`db.Begin()` y `tx.Exec()`) asegurando el `Rollback()` ante cualquier error y un único `Commit()` al final.
+
+## Frontend e Integración
+1. **Consistencia de Tipos**:
+   - Al modificar modelos en Go, se deben actualizar en consecuencia los tipos/interfaces TypeScript en el frontend para evitar desalineación.
+2. **Estilo**:
+   - En React, priorizar el uso de componentes funcionales con hooks, TypeScript estricto y Tailwind CSS para los estilos de la interfaz.

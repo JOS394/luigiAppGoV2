@@ -43,7 +43,7 @@ func (h *ExportHandler) ExportProductos(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *ExportHandler) ExportVentas(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.DB.Query(`SELECT id, cliente, total, estado, fecha FROM ventas WHERE deleted_at IS NULL ORDER BY fecha DESC`)
+	rows, err := h.DB.Query(`SELECT id, cliente_nombre, total_total, estado, created_at FROM ventas WHERE deleted_at IS NULL ORDER BY created_at DESC`)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al obtener datos: "+err.Error())
 		return
@@ -59,10 +59,16 @@ func (h *ExportHandler) ExportVentas(w http.ResponseWriter, r *http.Request) {
 	writer.Write([]string{"Folio", "Cliente", "Total", "Estado", "Fecha"})
 
 	for rows.Next() {
-		var id, cliente, estado, fecha string
+		var id, estado string
+		var clienteNombre sql.NullString
 		var total float64
-		rows.Scan(&id, &cliente, &total, &estado, &fecha)
-		writer.Write([]string{id, cliente, fmt.Sprintf("%.2f", total), estado, fecha})
+		var createdAt time.Time
+		rows.Scan(&id, &clienteNombre, &total, &estado, &createdAt)
+		clienteStr := ""
+		if clienteNombre.Valid {
+			clienteStr = clienteNombre.String
+		}
+		writer.Write([]string{id, clienteStr, fmt.Sprintf("%.2f", total), estado, createdAt.Format("2006-01-02 15:04:05")})
 	}
 }
 
@@ -83,10 +89,19 @@ func (h *ExportHandler) ExportClientes(w http.ResponseWriter, r *http.Request) {
 	writer.Write([]string{"ID", "Nombre", "Email", "Telefono", "Total Compras"})
 
 	for rows.Next() {
-		var id, nombre, email, telefono string
+		var id, nombre string
+		var email, telefono sql.NullString
 		var total float64
 		rows.Scan(&id, &nombre, &email, &telefono, &total)
-		writer.Write([]string{id, nombre, email, telefono, fmt.Sprintf("%.2f", total)})
+		emailStr := ""
+		if email.Valid {
+			emailStr = email.String
+		}
+		telefonoStr := ""
+		if telefono.Valid {
+			telefonoStr = telefono.String
+		}
+		writer.Write([]string{id, nombre, emailStr, telefonoStr, fmt.Sprintf("%.2f", total)})
 	}
 }
 
@@ -107,9 +122,15 @@ func (h *ExportHandler) ExportMovimientos(w http.ResponseWriter, r *http.Request
 	writer.Write([]string{"ID", "Fecha", "Tipo", "Categoria", "Monto", "Metodo Pago", "Descripcion"})
 
 	for rows.Next() {
-		var id, fecha, tipo, categoria, metodo, desc string
+		var id, tipo, categoria, metodo string
+		var desc sql.NullString
+		var fecha time.Time
 		var monto float64
 		rows.Scan(&id, &fecha, &tipo, &categoria, &monto, &metodo, &desc)
-		writer.Write([]string{id, fecha, tipo, categoria, fmt.Sprintf("%.2f", monto), metodo, desc})
+		descStr := ""
+		if desc.Valid {
+			descStr = desc.String
+		}
+		writer.Write([]string{id, fecha.Format("2006-01-02 15:04:05"), tipo, categoria, fmt.Sprintf("%.2f", monto), metodo, descStr})
 	}
 }

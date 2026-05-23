@@ -9,6 +9,7 @@ import (
 
 	"github.com/JOS394/luigiAppGoV2/internal/models"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -80,7 +81,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := "U-" + time.Now().Format("050415") // ID simple basado en tiempo para el ejemplo
+	id := uuid.New().String()
 
 	_, err = h.DB.Exec(`INSERT INTO usuarios (id, nombre, email, password_hash, rol) VALUES ($1, $2, $3, $4, $5)`,
 		id, req.Nombre, req.Email, string(hashedPassword), req.Rol)

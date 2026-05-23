@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/JOS394/luigiAppGoV2/internal/models"
+	"github.com/google/uuid"
 )
 
 type ProductHandler struct {
@@ -32,10 +33,10 @@ func (h *ProductHandler) GetProductos(w http.ResponseWriter, r *http.Request) {
 	// 3. Iterar sobre las filas
 	for rows.Next() {
 		var p models.Producto
-		var id, nombre, categoria, tipo, codigoBarras, ubicacion, ubiEspe, img, created, updated sql.NullString
+		var id, nombre, categoria, tipo, codigoBarras, ubicacion, ubiEspe, img sql.NullString
 		var precio, costo, costoU sql.NullFloat64
 		var stock sql.NullInt64
-		var deleted sql.NullString
+		var created, updated, deleted sql.NullTime
 
 		err := rows.Scan(&id, &nombre, &precio, &costo, &costoU, &stock, &categoria, &tipo, &codigoBarras, &ubicacion, &ubiEspe, &img, &created, &updated, &deleted)
 		if err != nil {
@@ -49,18 +50,32 @@ func (h *ProductHandler) GetProductos(w http.ResponseWriter, r *http.Request) {
 		p.Costo = costo.Float64
 		p.CostoUnitario = costoU.Float64
 		p.Stock = int(stock.Int64)
-		p.Categoria = categoria.String
-		p.Tipo = tipo.String
+		if categoria.Valid {
+			p.Categoria = &categoria.String
+		}
+		if tipo.Valid {
+			p.Tipo = &tipo.String
+		}
 		if codigoBarras.Valid {
 			p.CodigoBarras = &codigoBarras.String
 		}
-		p.Ubicacion = ubicacion.String
-		p.UbicacionEspecifica = ubiEspe.String
-		p.ImagenURL = img.String
-		p.CreatedAt = created.String
-		p.UpdatedAt = updated.String
+		if ubicacion.Valid {
+			p.Ubicacion = &ubicacion.String
+		}
+		if ubiEspe.Valid {
+			p.UbicacionEspecifica = &ubiEspe.String
+		}
+		if img.Valid {
+			p.ImagenURL = &img.String
+		}
+		if created.Valid {
+			p.CreatedAt = created.Time
+		}
+		if updated.Valid {
+			p.UpdatedAt = updated.Time
+		}
 		if deleted.Valid {
-			p.DeletedAt = &deleted.String
+			p.DeletedAt = &deleted.Time
 		}
 
 		productos = append(productos, p)
@@ -81,8 +96,7 @@ func (h *ProductHandler) CreateProducto(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if p.ID == "" {
-		errorResponse(w, http.StatusBadRequest, "El ID del producto es requerido")
-		return
+		p.ID = uuid.New().String()
 	}
 
 	// 2. Insertar (SQL)
@@ -206,4 +220,3 @@ func (h *ProductHandler) DeleteProducto(w http.ResponseWriter, r *http.Request) 
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
-

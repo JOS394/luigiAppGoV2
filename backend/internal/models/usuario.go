@@ -1,20 +1,22 @@
 package models
 
+import "time"
+
 type Usuario struct {
-	ID           string  `json:"id"`
-	Nombre       string  `json:"nombre"`
-	Email        string  `json:"email"`
-	PasswordHash string  `json:"-"` // No exponer en JSON
-	Rol          string  `json:"rol"` // 'administrador', 'vendedor'
-	Estado       string  `json:"estado"`
-	CreatedAt    string  `json:"created_at"`
-	UpdatedAt    string  `json:"updated_at"`
-	DeletedAt    *string `json:"deleted_at"`
+	ID           string     `json:"id" validate:"required"`
+	Nombre       string     `json:"nombre" validate:"required"`
+	Email        string     `json:"email" validate:"required,email"`
+	PasswordHash string     `json:"-" validate:"required"`
+	Rol          string     `json:"rol" validate:"required"`
+	Estado       string     `json:"estado" validate:"required"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
+	DeletedAt    *time.Time `json:"deleted_at"`
 }
 
 type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
 }
 
 type LoginResponse struct {
@@ -23,8 +25,8 @@ type LoginResponse struct {
 }
 
 type RegisterRequest struct {
-	Nombre   string `json:"nombre"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Rol      string `json:"rol"`
+	Nombre   string `json:"nombre" validate:"required"`
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
+	Rol      string `json:"rol" validate:"required"`
 }

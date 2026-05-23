@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/JOS394/luigiAppGoV2/internal/models"
+	"github.com/google/uuid"
 )
 
 type ProviderHandler struct {
@@ -23,10 +24,20 @@ func (h *ProviderHandler) GetProveedores(w http.ResponseWriter, r *http.Request)
 	proveedores := []models.Proveedor{}
 	for rows.Next() {
 		var p models.Proveedor
-		err := rows.Scan(&p.ID, &p.Nombre, &p.Email, &p.Telefono, &p.Direccion, &p.CreatedAt, &p.UpdatedAt)
+		var email, telefono, direccion sql.NullString
+		err := rows.Scan(&p.ID, &p.Nombre, &email, &telefono, &direccion, &p.CreatedAt, &p.UpdatedAt)
 		if err != nil {
 			errorResponse(w, http.StatusInternalServerError, "Error al leer fila: "+err.Error())
 			return
+		}
+		if email.Valid {
+			p.Email = &email.String
+		}
+		if telefono.Valid {
+			p.Telefono = &telefono.String
+		}
+		if direccion.Valid {
+			p.Direccion = &direccion.String
 		}
 		proveedores = append(proveedores, p)
 	}
@@ -38,6 +49,10 @@ func (h *ProviderHandler) CreateProveedor(w http.ResponseWriter, r *http.Request
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
 		errorResponse(w, http.StatusBadRequest, "JSON inválido")
 		return
+	}
+
+	if p.ID == "" {
+		p.ID = uuid.New().String()
 	}
 
 	_, err := h.DB.Exec(`INSERT INTO proveedores (id, nombre, email, telefono, direccion) VALUES ($1, $2, $3, $4, $5)`,

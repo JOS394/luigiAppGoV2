@@ -1,12 +1,14 @@
 package models
 
+import "time"
+
 type InventarioMovimiento struct {
-	ID         int    `json:"id"`
-	ProductoID string `json:"producto_id"`
-	Tipo       string `json:"tipo"` // 'Entrada', 'Salida', 'Ajuste'
-	Cantidad   int    `json:"cantidad"`
-	Motivo     string `json:"motivo"`
-	Fecha      string `json:"fecha"`
+	ID         string    `json:"id" validate:"required"`
+	ProductoID string    `json:"producto_id" validate:"required"`
+	Tipo       *string   `json:"tipo"` // 'Entrada', 'Salida', 'Ajuste'
+	Cantidad   int       `json:"cantidad" validate:"required,gt=0"`
+	Motivo     *string   `json:"motivo"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 type InventarioValor struct {

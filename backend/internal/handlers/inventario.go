@@ -95,7 +95,7 @@ func (h *InventoryHandler) GetMovimientosByProducto(w http.ResponseWriter, r *ht
 		return
 	}
 
-	rows, err := h.DB.Query(`SELECT id, producto_id, tipo, cantidad, motivo, fecha FROM inventario_movimientos WHERE producto_id = $1 ORDER BY fecha DESC`, id)
+	rows, err := h.DB.Query(`SELECT id, producto_id, tipo, cantidad, motivo, created_at FROM inventario_movimientos WHERE producto_id = $1 ORDER BY created_at DESC`, id)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al consultar historial: "+err.Error())
 		return
@@ -105,9 +105,16 @@ func (h *InventoryHandler) GetMovimientosByProducto(w http.ResponseWriter, r *ht
 	movimientos := []models.InventarioMovimiento{}
 	for rows.Next() {
 		var m models.InventarioMovimiento
-		if err := rows.Scan(&m.ID, &m.ProductoID, &m.Tipo, &m.Cantidad, &m.Motivo, &m.Fecha); err != nil {
+		var tipo, motivo sql.NullString
+		if err := rows.Scan(&m.ID, &m.ProductoID, &tipo, &m.Cantidad, &motivo, &m.CreatedAt); err != nil {
 			errorResponse(w, http.StatusInternalServerError, "Error al escanear fila: "+err.Error())
 			return
+		}
+		if tipo.Valid {
+			m.Tipo = &tipo.String
+		}
+		if motivo.Valid {
+			m.Motivo = &motivo.String
 		}
 		movimientos = append(movimientos, m)
 	}

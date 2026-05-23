@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/JOS394/luigiAppGoV2/internal/models"
+	"github.com/google/uuid"
 )
 
 type VentaHandler struct {
@@ -20,7 +21,7 @@ func (h *VentaHandler) CreateVenta(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if v.ID == "" {
-		v.ID = "V-" + string(rune(1000+len(v.Cliente))) // Generador muy simple de respaldo
+		v.ID = uuid.New().String()
 	}
 	if v.Estado == "" {
 		v.Estado = "Completada"
@@ -32,9 +33,19 @@ func (h *VentaHandler) CreateVenta(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if v.UsuarioID == "" {
+		// Fallback: obtener el primer usuario de la base de datos
+		err := h.DB.QueryRow(`SELECT id FROM usuarios LIMIT 1`).Scan(&v.UsuarioID)
+		if err != nil {
+			tx.Rollback()
+			errorResponse(w, http.StatusInternalServerError, "No se encontró un usuario para asociar a la venta: "+err.Error())
+			return
+		}
+	}
+
 	// 1. Insertar cabecera de venta
-	_, err = tx.Exec(`INSERT INTO ventas (id, cliente, total, estado) VALUES ($1, $2, $3, $4)`,
-		v.ID, v.Cliente, v.Total, v.Estado)
+	_, err = tx.Exec(`INSERT INTO ventas (id, usuario_id, cliente_nombre, total_neto, impuesto, total_total, estado) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		v.ID, v.UsuarioID, v.ClienteNombre, v.TotalNeto, v.Impuesto, v.TotalTotal, v.Estado)
 	if err != nil {
 		tx.Rollback()
 		errorResponse(w, http.StatusInternalServerError, "Error al insertar venta: "+err.Error())
@@ -80,8 +91,8 @@ func (h *VentaHandler) CreateVenta(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3. Registrar el ingreso financiero
-	_, err = tx.Exec(`INSERT INTO movimientos_financieros (tipo, categoria, monto, metodo_pago, descripcion) VALUES ($1, $2, $3, $4, $5)`,
-		"Ingreso", "Venta", v.Total, "Efectivo", "Venta ID: "+v.ID) // Asumimos efectivo por ahora o sacamos de v
+	_, err = tx.Exec(`INSERT INTO movimientos_financieros (tipo, categoria, monto, metodo_pago, descripcion, venta_id) VALUES ($1, $2, $3, $4, $5, $6)`,
+		"Ingreso", "Venta", v.TotalTotal, "Efectivo", "Venta ID: "+v.ID, v.ID) // Asumimos efectivo por ahora o sacamos de v
 	if err != nil {
 		tx.Rollback()
 		errorResponse(w, http.StatusInternalServerError, "Error al registrar ingreso financiero: "+err.Error())
@@ -97,7 +108,7 @@ func (h *VentaHandler) CreateVenta(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *VentaHandler) GetVentas(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.DB.Query(`SELECT id, cliente, total, estado, fecha, created_at, updated_at, deleted_at FROM ventas WHERE deleted_at IS NULL ORDER BY fecha DESC`)
+	rows, err := h.DB.Query(`SELECT id, usuario_id, cliente_nombre, total_neto, impuesto, total_total, estado, created_at, updated_at, deleted_at FROM ventas WHERE deleted_at IS NULL ORDER BY created_at DESC`)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al obtener ventas: "+err.Error())
 		return
@@ -108,9 +119,13 @@ func (h *VentaHandler) GetVentas(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var v models.Venta
 		v.Detalle = []models.VentaDetalle{} // Inicializar como slice vacío en lugar de nil
-		if err := rows.Scan(&v.ID, &v.Cliente, &v.Total, &v.Estado, &v.Fecha, &v.CreatedAt, &v.UpdatedAt, &v.DeletedAt); err != nil {
+		var clienteNombre sql.NullString
+		if err := rows.Scan(&v.ID, &v.UsuarioID, &clienteNombre, &v.TotalNeto, &v.Impuesto, &v.TotalTotal, &v.Estado, &v.CreatedAt, &v.UpdatedAt, &v.DeletedAt); err != nil {
 			errorResponse(w, http.StatusInternalServerError, "Error al escanear ventas: "+err.Error())
 			return
+		}
+		if clienteNombre.Valid {
+			v.ClienteNombre = &clienteNombre.String
 		}
 
 		// Obtener detalles de la venta

@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/JOS394/luigiAppGoV2/internal/models"
+	"github.com/google/uuid"
 )
 
 type ClientHandler struct {
@@ -13,7 +14,7 @@ type ClientHandler struct {
 }
 
 func (h *ClientHandler) GetClientes(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.DB.Query(`SELECT id, nombre, email, telefono, direccion, notas, total_compras, COALESCE(ultima_visita::text, ''), created_at, updated_at FROM clientes WHERE deleted_at IS NULL`)
+	rows, err := h.DB.Query(`SELECT id, nombre, email, telefono, direccion, notas, total_compras, ultima_visita, created_at, updated_at FROM clientes WHERE deleted_at IS NULL`)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al consultar clientes: "+err.Error())
 		return
@@ -23,10 +24,27 @@ func (h *ClientHandler) GetClientes(w http.ResponseWriter, r *http.Request) {
 	clientes := []models.Cliente{}
 	for rows.Next() {
 		var c models.Cliente
-		err := rows.Scan(&c.ID, &c.Nombre, &c.Email, &c.Telefono, &c.Direccion, &c.Notas, &c.TotalCompras, &c.UltimaVisita, &c.CreatedAt, &c.UpdatedAt)
+		var email, telefono, direccion, notas sql.NullString
+		var ultimaVisita sql.NullTime
+		err := rows.Scan(&c.ID, &c.Nombre, &email, &telefono, &direccion, &notas, &c.TotalCompras, &ultimaVisita, &c.CreatedAt, &c.UpdatedAt)
 		if err != nil {
 			errorResponse(w, http.StatusInternalServerError, "Error al leer fila: "+err.Error())
 			return
+		}
+		if email.Valid {
+			c.Email = &email.String
+		}
+		if telefono.Valid {
+			c.Telefono = &telefono.String
+		}
+		if direccion.Valid {
+			c.Direccion = &direccion.String
+		}
+		if notas.Valid {
+			c.Notas = &notas.String
+		}
+		if ultimaVisita.Valid {
+			c.UltimaVisita = &ultimaVisita.Time
 		}
 		clientes = append(clientes, c)
 	}
@@ -41,8 +59,7 @@ func (h *ClientHandler) CreateCliente(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if c.ID == "" {
-		// Generar un ID simple si no viene
-		c.ID = "C-" + string(rune(1000+len(c.Nombre))) // Simplificación extrema
+		c.ID = uuid.New().String()
 	}
 
 	_, err := h.DB.Exec(`INSERT INTO clientes (id, nombre, email, telefono, direccion, notas) VALUES ($1, $2, $3, $4, $5, $6)`,

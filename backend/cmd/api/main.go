@@ -4,9 +4,13 @@ import (
 	"database/sql"
 	"flag"
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/JOS394/luigiAppGoV2/internal/database"
+	"github.com/JOS394/luigiAppGoV2/internal/middleware"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -15,23 +19,25 @@ type application struct {
 }
 
 func main() {
+	// 0. Configurar Logger estructurado
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
 	createAdmin := flag.Bool("create-admin", false, "Crea un usuario administrador inicial")
 	flag.Parse()
 
-	// 1. Conexión a Base de Datos (PostgreSQL)
 	db, err := database.Connect("postgres://postgres:admin@localhost:5432/luigiapp?sslmode=disable")
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("Error conectando a DB", "error", err)
+		os.Exit(1)
 	}
 	defer db.Close()
 
-	// 2. Ejecutar Migraciones
-	err = database.RunMigrations(db)
-	if err != nil {
-		log.Fatalf("Error al ejecutar migraciones: %v", err)
+	if err := database.RunMigrations(db); err != nil {
+		slog.Error("Error en migraciones", "error", err)
+		os.Exit(1)
 	}
 
-	// 3. Script de Admin Inicial
 	if *createAdmin {
 		createInitialAdmin(db)
 		return
@@ -39,11 +45,17 @@ func main() {
 
 	app := &application{db: db}
 
-	// 4. Iniciar Servidor
-	log.Println("🚀 Servidor LuigiApp V3 (PostgreSQL) en http://localhost:8080")
-	err = http.ListenAndServe(":8080", app.routes())
-	if err != nil {
-		log.Fatal(err)
+	// 4. Iniciar Servidor con Middlewares aplicados
+	slog.Info("🚀 Servidor LuigiApp V3 iniciado", "port", "8080")
+
+	// Aplicamos los middlewares aquí o dentro de app.routes()
+	srv := &http.Server{
+		Addr:    ":8080",
+		Handler: middleware.Logger(middleware.Cors(app.routes())),
+	}
+
+	if err := srv.ListenAndServe(); err != nil {
+		slog.Error("Servidor falló", "error", err)
 	}
 }
 
@@ -59,8 +71,9 @@ func createInitialAdmin(db *sql.DB) {
 
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
+	id := uuid.New().String()
 	_, err := db.Exec(`INSERT INTO usuarios (id, nombre, email, password_hash, rol) VALUES ($1, $2, $3, $4, $5)`,
-		"U-ADMIN", nombre, email, string(hashedPassword), rol)
+		id, nombre, email, string(hashedPassword), rol)
 
 	if err != nil {
 		log.Fatalf("Error al crear admin: %v", err)

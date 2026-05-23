@@ -12,12 +12,12 @@ type ReportHandler struct {
 func (h *ReportHandler) GetResumen(w http.ResponseWriter, r *http.Request) {
 	// Ventas de hoy
 	var ventasHoy float64
-	queryHoy := `SELECT COALESCE(SUM(total), 0) FROM ventas WHERE fecha::date = CURRENT_DATE AND deleted_at IS NULL`
+	queryHoy := `SELECT COALESCE(SUM(total_total), 0) FROM ventas WHERE created_at::date = CURRENT_DATE AND deleted_at IS NULL`
 	h.DB.QueryRow(queryHoy).Scan(&ventasHoy)
 
 	// Ventas de ayer (para calcular crecimiento)
 	var ventasAyer float64
-	queryAyer := `SELECT COALESCE(SUM(total), 0) FROM ventas WHERE fecha::date = CURRENT_DATE - INTERVAL '1 day' AND deleted_at IS NULL`
+	queryAyer := `SELECT COALESCE(SUM(total_total), 0) FROM ventas WHERE created_at::date = CURRENT_DATE - INTERVAL '1 day' AND deleted_at IS NULL`
 	h.DB.QueryRow(queryAyer).Scan(&ventasAyer)
 
 	// Crecimiento
@@ -29,7 +29,7 @@ func (h *ReportHandler) GetResumen(w http.ResponseWriter, r *http.Request) {
 	// Transacciones totales y ticket promedio
 	var totalTransacciones int
 	var ticketPromedio float64
-	queryStats := `SELECT COUNT(*), COALESCE(AVG(total), 0) FROM ventas WHERE deleted_at IS NULL`
+	queryStats := `SELECT COUNT(*), COALESCE(AVG(total_total), 0) FROM ventas WHERE deleted_at IS NULL`
 	h.DB.QueryRow(queryStats).Scan(&totalTransacciones, &ticketPromedio)
 
 	// Balance mensual (Ingresos - Egresos)
@@ -80,9 +80,9 @@ func (h *ReportHandler) GetDetallado(w http.ResponseWriter, r *http.Request) {
 
 	// 2. Ventas por día de la última semana
 	querySemana := `
-		SELECT EXTRACT(DOW FROM fecha) as dia_sem, SUM(total) as monto
+		SELECT EXTRACT(DOW FROM created_at) as dia_sem, SUM(total_total) as monto
 		FROM ventas
-		WHERE fecha >= CURRENT_DATE - INTERVAL '7 days' AND deleted_at IS NULL
+		WHERE created_at >= CURRENT_DATE - INTERVAL '7 days' AND deleted_at IS NULL
 		GROUP BY dia_sem
 		ORDER BY dia_sem ASC
 	`
