@@ -108,6 +108,31 @@ func (h *ProductHandler) CreateProducto(w http.ResponseWriter, r *http.Request) 
 		p.ID = uuid.New().String()
 	}
 
+	// Convertir campos vacíos a nil para evitar conflictos de clave única (UNIQUE)
+	if p.CodigoBarras != nil && *p.CodigoBarras == "" {
+		p.CodigoBarras = nil
+	}
+	if p.CodigoBarrasSecundario != nil && *p.CodigoBarrasSecundario == "" {
+		p.CodigoBarrasSecundario = nil
+	}
+	if p.Ubicacion != nil && *p.Ubicacion == "" {
+		p.Ubicacion = nil
+	}
+	if p.UbicacionEspecifica != nil && *p.UbicacionEspecifica == "" {
+		p.UbicacionEspecifica = nil
+	}
+	if p.Descripcion != nil && *p.Descripcion == "" {
+		p.Descripcion = nil
+	}
+	if p.ImagenURL != nil && *p.ImagenURL == "" {
+		p.ImagenURL = nil
+	}
+
+	// Auto-generar SKU si es un servicio y no viene SKU
+	if p.SKU == "" && p.Tipo != nil && *p.Tipo == "servicio" {
+		p.SKU = "SRV-" + uuid.New().String()[:8]
+	}
+
 	// Validación previa: verificar SKU
 	var exists bool
 	err := h.DB.QueryRow(`SELECT EXISTS(SELECT 1 FROM productos WHERE sku = $1 AND deleted_at IS NULL)`, p.SKU).Scan(&exists)
@@ -221,6 +246,31 @@ func (h *ProductHandler) UpdateProducto(w http.ResponseWriter, r *http.Request) 
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
 		errorResponse(w, http.StatusBadRequest, "JSON inválido")
 		return
+	}
+
+	// Convertir campos vacíos a nil para evitar conflictos de clave única (UNIQUE)
+	if p.CodigoBarras != nil && *p.CodigoBarras == "" {
+		p.CodigoBarras = nil
+	}
+	if p.CodigoBarrasSecundario != nil && *p.CodigoBarrasSecundario == "" {
+		p.CodigoBarrasSecundario = nil
+	}
+	if p.Ubicacion != nil && *p.Ubicacion == "" {
+		p.Ubicacion = nil
+	}
+	if p.UbicacionEspecifica != nil && *p.UbicacionEspecifica == "" {
+		p.UbicacionEspecifica = nil
+	}
+	if p.Descripcion != nil && *p.Descripcion == "" {
+		p.Descripcion = nil
+	}
+	if p.ImagenURL != nil && *p.ImagenURL == "" {
+		p.ImagenURL = nil
+	}
+
+	// Auto-generar SKU si es un servicio y no viene SKU
+	if p.SKU == "" && p.Tipo != nil && *p.Tipo == "servicio" {
+		p.SKU = "SRV-" + uuid.New().String()[:8]
 	}
 
 	// Verificar SKU único en actualización

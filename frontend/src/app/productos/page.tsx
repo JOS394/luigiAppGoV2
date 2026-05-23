@@ -110,6 +110,18 @@ export default function ProductosPage() {
     }
   };
 
+  const handleImportProducts = async (file: File) => {
+    try {
+      const res = await apiService.import.productos(file);
+      toast.success(res.message || 'Importación completada');
+      setShowImportModal(false);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Error al importar archivo');
+      throw err;
+    }
+  };
+
   const clearFilters = () => {
     setFilters({
       categoria: 'Todas',
@@ -263,8 +275,9 @@ export default function ProductosPage() {
       <ImportModal 
         show={showImportModal}
         onClose={() => setShowImportModal(false)}
-        onImport={(msg) => { toast.success(msg); setShowImportModal(false); }}
+        onImport={handleImportProducts}
         title="Importar Productos"
+        context="productos"
       />
 
       <StockAdjustmentModal 

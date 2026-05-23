@@ -122,14 +122,10 @@ export interface Compra {
 export interface MovimientoInventario {
   id: string;
   productoId: string;
-  productoNombre: string;
   tipo: 'Entrada' | 'Salida' | 'Ajuste';
   cantidad: number;
   motivo: string;
-  fecha: string;
-  usuario?: string;
-  stockPrevio: number;
-  stockNuevo: number;
+  createdAt: string;
 }
 
 export type Rol = 'administrador' | 'vendedor';

@@ -90,13 +90,15 @@ func (h *VentaHandler) CreateVenta(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// 3. Registrar el ingreso financiero
-	_, err = tx.Exec(`INSERT INTO movimientos_financieros (tipo, categoria, monto, metodo_pago, descripcion, venta_id) VALUES ($1, $2, $3, $4, $5, $6)`,
-		"Ingreso", "Venta", v.TotalTotal, "Efectivo", "Venta ID: "+v.ID, v.ID) // Asumimos efectivo por ahora o sacamos de v
-	if err != nil {
-		tx.Rollback()
-		errorResponse(w, http.StatusInternalServerError, "Error al registrar ingreso financiero: "+err.Error())
-		return
+	// 3. Registrar el ingreso financiero (solo si el monto es mayor a 0 para no violar el check constraint)
+	if v.TotalTotal > 0 {
+		_, err = tx.Exec(`INSERT INTO movimientos_financieros (tipo, categoria, monto, metodo_pago, descripcion, venta_id) VALUES ($1, $2, $3, $4, $5, $6)`,
+			"Ingreso", "Venta", v.TotalTotal, "Efectivo", "Venta ID: "+v.ID, v.ID) // Asumimos efectivo por ahora o sacamos de v
+		if err != nil {
+			tx.Rollback()
+			errorResponse(w, http.StatusInternalServerError, "Error al registrar ingreso financiero: "+err.Error())
+			return
+		}
 	}
 
 	if err := tx.Commit(); err != nil {

@@ -9,18 +9,13 @@ interface ExportModalProps {
   show: boolean;
   onClose: () => void;
   onExport: (msg: string) => void;
-  context?: 'productos' | 'ventas' | 'clientes' | 'finanzas';
+  context?: 'productos' | 'servicios' | 'ventas' | 'clientes' | 'finanzas';
 }
 
 export function ExportModal({ show, onClose, onExport, context }: ExportModalProps) {
   if (!show) return null;
 
   const handleDownload = async (formatId: string, label: string) => {
-    if (formatId !== 'csv') {
-      toast.error('Formato no disponible en esta versión');
-      return;
-    }
-
     if (!context || !apiService.export[context as keyof typeof apiService.export]) {
       // Fallback a comportamiento mock
       onExport(`Exportando a ${label}`);
@@ -29,7 +24,7 @@ export function ExportModal({ show, onClose, onExport, context }: ExportModalPro
 
     try {
       toast.loading('Generando archivo...');
-      await apiService.export[context as keyof typeof apiService.export]();
+      await (apiService.export[context as keyof typeof apiService.export] as any)(formatId);
       toast.dismiss();
       toast.success('Descarga iniciada');
       onClose();

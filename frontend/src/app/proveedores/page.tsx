@@ -205,8 +205,12 @@ export default function ProveedoresPage() {
       <ImportModal 
         show={showImportModal}
         onClose={() => setShowImportModal(false)}
-        onImport={(msg) => { toast.success(msg); setShowImportModal(false); }}
+        onImport={async (file) => {
+          toast.success(`Archivo "${file.name}" seleccionado para importar`);
+          setShowImportModal(false);
+        }}
         title="Importar Proveedores"
+        context="proveedores"
       />
     </div>
   );

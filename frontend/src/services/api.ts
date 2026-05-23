@@ -8,6 +8,17 @@ import type {
 
 const BASE_URL = 'http://localhost:8080/api';
 
+const generateUUID = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 const fetcher = async (endpoint: string, options?: RequestInit) => {
   // Asegurar que el endpoint no empiece con / si BASE_URL ya lo tiene o viceversa
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
@@ -134,9 +145,9 @@ const mapProductoToBackend = (p: any) => ({
 
 const mapVentaFromBackend = (v: any): Venta => ({
   id: v.id,
-  fecha: v.fecha,
-  cliente: v.cliente,
-  total: v.total,
+  fecha: v.fecha || v.created_at || new Date().toISOString(),
+  cliente: v.cliente || v.cliente_nombre || 'Cliente General',
+  total: typeof v.total === 'number' ? v.total : (v.total_total || 0),
   estado: v.estado as any,
   createdAt: v.created_at,
   updatedAt: v.updated_at,
@@ -252,13 +263,10 @@ export const apiService = {
       return (data || []).map((m: any) => ({
         id: m.id.toString(),
         productoId: m.producto_id,
-        productoNombre: '', // No lo necesitamos en el modal ya que tenemos el producto
         tipo: m.tipo,
         cantidad: m.cantidad,
-        motivo: m.motivo,
-        fecha: m.fecha,
-        stockPrevio: 0, // El backend no devuelve estos cálculos por ahora
-        stockNuevo: 0
+        motivo: m.motivo || '',
+        createdAt: m.created_at
       }));
     },
     ajustarStock: async (data: { productoId: string, cantidad: number, tipo: 'Entrada' | 'Salida' | 'Ajuste', motivo: string }): Promise<void> => {
@@ -344,10 +352,13 @@ export const apiService = {
       return (data || []).map(mapVentaFromBackend);
     },
     create: async (venta: Omit<Venta, 'id' | 'fecha'>): Promise<Venta> => {
+      const generatedId = generateUUID();
       const body = {
-        id: `V-${Math.floor(Math.random() * 10000)}`,
-        cliente: venta.cliente,
-        total: venta.total,
+        id: generatedId,
+        cliente_nombre: venta.cliente,
+        total_neto: venta.total,
+        impuesto: 0,
+        total_total: venta.total,
         estado: venta.estado || 'Completada',
         detalle: venta.detalles.map(d => ({
           producto_id: d.productoId,
@@ -356,11 +367,11 @@ export const apiService = {
           subtotal: d.subtotal,
         })),
       };
-      await fetcher('/ventas', {
+      const res = await fetcher('/ventas', {
         method: 'POST',
         body: JSON.stringify(body),
       });
-      return { ...venta, id: body.id, fecha: new Date().toISOString() } as Venta;
+      return { ...venta, id: res?.id || generatedId, fecha: new Date().toISOString() } as unknown as Venta;
     }
   },
   productos: {
@@ -525,8 +536,51 @@ export const apiService = {
     }
   },
   export: {
-    productos: () => downloader('/export/productos', `productos_${new Date().toISOString().split('T')[0]}.csv`),
-    ventas: () => downloader('/export/ventas', `ventas_${new Date().toISOString().split('T')[0]}.csv`),
-    clientes: () => downloader('/export/clientes', `clientes_${new Date().toISOString().split('T')[0]}.csv`),
+    productos: (format: string = 'csv') => {
+      const ext = format === 'excel' ? 'xlsx' : format === 'pdf' ? 'pdf' : 'csv';
+      return downloader(`/export/productos?format=${format}`, `productos_${new Date().toISOString().split('T')[0]}.${ext}`);
+    },
+    servicios: (format: string = 'csv') => {
+      const ext = format === 'excel' ? 'xlsx' : format === 'pdf' ? 'pdf' : 'csv';
+      return downloader(`/export/productos?format=${format}&tipo=servicio`, `servicios_${new Date().toISOString().split('T')[0]}.${ext}`);
+    },
+    ventas: (format: string = 'csv') => {
+      const ext = format === 'excel' ? 'xlsx' : format === 'pdf' ? 'pdf' : 'csv';
+      return downloader(`/export/ventas?format=${format}`, `ventas_${new Date().toISOString().split('T')[0]}.${ext}`);
+    },
+    clientes: (format: string = 'csv') => {
+      const ext = format === 'excel' ? 'xlsx' : format === 'pdf' ? 'pdf' : 'csv';
+      return downloader(`/export/clientes?format=${format}`, `clientes_${new Date().toISOString().split('T')[0]}.${ext}`);
+    },
+    finanzas: (format: string = 'csv') => {
+      const ext = format === 'excel' ? 'xlsx' : format === 'pdf' ? 'pdf' : 'csv';
+      return downloader(`/export/finanzas?format=${format}`, `finanzas_${new Date().toISOString().split('T')[0]}.${ext}`);
+    },
+  },
+  import: {
+    productos: async (file: File, tipo?: string): Promise<any> => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const url = tipo ? `http://localhost:8080/api/import/productos?tipo=${tipo}` : `http://localhost:8080/api/import/productos`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Error al importar el archivo");
+      }
+
+      return await response.json();
+    },
+    downloadTemplate: (context: string) => {
+      return downloader(`/import/template?context=${context}`, `plantilla_${context}.xlsx`);
+    }
   }
 };

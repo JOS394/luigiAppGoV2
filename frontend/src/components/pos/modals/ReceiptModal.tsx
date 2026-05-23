@@ -57,7 +57,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ show, onClose, venta
             <div className="space-y-1 mb-4 text-[10px]">
               <div className="flex justify-between">
                 <span>FOLIO:</span>
-                <span className="font-bold">{venta.id}</span>
+                <span className="font-bold">{venta.id.includes('-') ? `V-${venta.id.split('-')[0].toUpperCase()}` : venta.id}</span>
               </div>
               <div className="flex justify-between">
                 <span>FECHA:</span>

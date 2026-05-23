@@ -28,6 +28,7 @@ func (app *application) routes() http.Handler {
 	authH := &handlers.AuthHandler{DB: app.db}
 	reportH := &handlers.ReportHandler{DB: app.db}
 	exportH := &handlers.ExportHandler{DB: app.db}
+	importH := &handlers.ImportHandler{DB: app.db}
 
 	// Rutas Públicas
 	r.Post("/api/auth/login", authH.Login)
@@ -84,6 +85,13 @@ func (app *application) routes() http.Handler {
 			r.Get("/ventas", exportH.ExportVentas)
 			r.Get("/clientes", exportH.ExportClientes)
 			r.Get("/finanzas", exportH.ExportMovimientos)
+		})
+
+		// IMPORTACIÓN (Solo Admin)
+		r.Route("/api/import", func(r chi.Router) {
+			r.Use(middleware.RequireRole("administrador"))
+			r.Post("/productos", importH.ImportProductos)
+			r.Get("/template", importH.GetTemplate)
 		})
 
 		// PROVEEDORES

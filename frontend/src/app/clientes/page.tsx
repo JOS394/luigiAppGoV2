@@ -275,8 +275,12 @@ export default function ClientesPage() {
       <ImportModal 
         show={showImportModal}
         onClose={() => setShowImportModal(false)}
-        onImport={handleAction}
+        onImport={async (file) => {
+          toast.success(`Archivo "${file.name}" seleccionado para importar`);
+          setShowImportModal(false);
+        }}
         title="Importar Clientes"
+        context="clientes"
       />
 
       <ExportModal 

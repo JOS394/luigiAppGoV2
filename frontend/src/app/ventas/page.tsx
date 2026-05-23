@@ -6,6 +6,7 @@ import type { Producto, Venta } from '@/types';
 import { POSView } from '@/components/pos/POSView';
 import { SalesFilterModal } from '@/components/ventas/modals/SalesFilterModal';
 import { ExportModal } from '@/components/clientes/modals/ExportModal';
+import { ReceiptModal } from '@/components/pos/modals/ReceiptModal';
 import { toast } from 'sonner';
 import { ShoppingCart, History, Calendar, Filter, Search, Download } from 'lucide-react';
 
@@ -21,6 +22,8 @@ export default function VentasPage() {
   // Modales
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [selectedVenta, setSelectedVenta] = useState<Venta | null>(null);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
 
   // Filtros
   const [filters, setFilters] = useState({
@@ -56,8 +59,10 @@ export default function VentasPage() {
   }, []);
 
   const filteredVentas = ventas.filter(v => {
+    const formattedFolio = v.id.includes('-') ? `V-${v.id.split('-')[0].toUpperCase()}` : v.id;
     const matchesSearch = v.cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         v.id.toLowerCase().includes(searchTerm.toLowerCase());
+                         v.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         formattedFolio.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesEstado = filters.estado === 'Todos' || v.estado === filters.estado;
     
@@ -182,10 +187,10 @@ export default function VentasPage() {
             {/* VISTA MÓVIL (CARDS) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden">
               {filteredVentas.length > 0 ? filteredVentas.map((v) => (
-                <div key={v.id} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4 active:scale-[0.98] transition-transform cursor-pointer group">
+                <div key={v.id} onClick={() => { setSelectedVenta(v); setShowReceiptModal(true); }} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4 active:scale-[0.98] transition-transform cursor-pointer group">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Orden #{v.id}</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Orden #{v.id.includes('-') ? `V-${v.id.split('-')[0].toUpperCase()}` : v.id}</p>
                       <h4 className="font-bold text-slate-800 text-sm uppercase mt-1 group-hover:text-primary transition-colors">{v.cliente}</h4>
                     </div>
                     <span className={`badge border-none font-bold text-[9px] uppercase py-2 px-3 rounded ${
@@ -230,9 +235,9 @@ export default function VentasPage() {
                 </thead>
                 <tbody>
                   {filteredVentas.length > 0 ? filteredVentas.map((v) => (
-                    <tr key={v.id} className="hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-0 cursor-pointer group">
+                    <tr key={v.id} onClick={() => { setSelectedVenta(v); setShowReceiptModal(true); }} className="hover:bg-slate-50/50 transition-colors border-b border-slate-50 last:border-0 cursor-pointer group">
                       <td className="px-8 font-bold text-slate-400 text-xs">
-                        {v.id}
+                        {v.id.includes('-') ? `V-${v.id.split('-')[0].toUpperCase()}` : v.id}
                       </td>
                       <td className="text-slate-600 font-medium">
                         <div className="flex flex-col">
@@ -285,6 +290,13 @@ export default function VentasPage() {
         onClose={() => setShowExportModal(false)}
         onExport={(msg) => { toast.success(msg); setShowExportModal(false); }}
         context="ventas"
+      />
+
+      <ReceiptModal
+        show={showReceiptModal}
+        onClose={() => { setShowReceiptModal(false); setSelectedVenta(null); }}
+        venta={selectedVenta}
+        productos={productos}
       />
     </div>
   );

@@ -35,7 +35,7 @@ export function InventoryHistoryModal({ show, onClose, producto, movimientos }: 
                 <tr>
                   <th className="px-8 py-4">Fecha / Motivo</th>
                   <th>Operación</th>
-                  <th className="text-right px-8">Stock</th>
+                  <th className="text-right px-8">Cantidad</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -43,20 +43,30 @@ export function InventoryHistoryModal({ show, onClose, producto, movimientos }: 
                   <tr key={m.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-8 py-4">
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">{new Date(m.fecha).toLocaleString()}</span>
-                        <span className="font-bold text-slate-700 text-xs">{m.motivo}</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">
+                          {m.createdAt ? new Date(m.createdAt).toLocaleString() : 'N/A'}
+                        </span>
+                        <span className="font-bold text-slate-700 text-xs">{m.motivo || 'Sin motivo especificado'}</span>
                       </div>
                     </td>
                     <td>
                       <div className={`flex items-center gap-2 font-bold text-[10px] uppercase ${
-                        m.tipo === 'Entrada' ? 'text-green-600' : 'text-red-500'
+                        m.tipo === 'Entrada' ? 'text-green-600' :
+                        m.tipo === 'Salida' ? 'text-red-500' : 'text-blue-600'
                       }`}>
-                        {m.tipo === 'Entrada' ? <ArrowUpCircle size={14}/> : <ArrowDownCircle size={14}/>}
-                        {m.tipo} ({m.cantidad})
+                        {m.tipo === 'Entrada' ? <ArrowUpCircle size={14}/> :
+                         m.tipo === 'Salida' ? <ArrowDownCircle size={14}/> :
+                         <Info size={14}/>}
+                        {m.tipo}
                       </div>
                     </td>
-                    <td className="text-right px-8 font-mono text-xs font-bold text-slate-500">
-                      {m.stockPrevio} → <span className="text-slate-800">{m.stockNuevo}</span>
+                    <td className="text-right px-8 font-mono text-xs font-bold">
+                      <span className={
+                        m.tipo === 'Entrada' ? 'text-green-600' :
+                        m.tipo === 'Salida' ? 'text-red-500' : 'text-blue-600'
+                      }>
+                        {m.tipo === 'Entrada' ? '+' : m.tipo === 'Salida' ? '-' : ''}{m.cantidad}
+                      </span>
                     </td>
                   </tr>
                 ))}
