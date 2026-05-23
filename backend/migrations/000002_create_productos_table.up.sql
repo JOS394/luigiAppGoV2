@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS productos (
     costo_unitario DOUBLE PRECISION NOT NULL DEFAULT 0,
     stock INTEGER NOT NULL DEFAULT 0, -- Ajuste: valor por defecto
     sku TEXT UNIQUE NOT NULL,
+    descripcion TEXT,
     categoria TEXT,
     tipo TEXT CHECK(tipo IN ('producto', 'servicio')),
     codigo_barras TEXT UNIQUE,

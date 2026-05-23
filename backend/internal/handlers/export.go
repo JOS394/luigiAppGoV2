@@ -13,7 +13,7 @@ type ExportHandler struct {
 }
 
 func (h *ExportHandler) ExportProductos(w http.ResponseWriter, r *http.Request) {
-	rows, err := h.DB.Query(`SELECT id, nombre, precio, costo, stock, categoria, tipo, codigo_barras FROM productos WHERE deleted_at IS NULL`)
+	rows, err := h.DB.Query(`SELECT id, nombre, sku, descripcion, precio, costo, costo_unitario, stock, categoria, tipo, codigo_barras, codigo_barras_secundario, ubicacion, ubicacion_especifica, imagen_url, created_at FROM productos WHERE deleted_at IS NULL`)
 	if err != nil {
 		errorResponse(w, http.StatusInternalServerError, "Error al obtener datos: "+err.Error())
 		return
@@ -28,16 +28,24 @@ func (h *ExportHandler) ExportProductos(w http.ResponseWriter, r *http.Request) 
 	defer writer.Flush()
 
 	// Escribir cabecera
-	writer.Write([]string{"ID", "Nombre", "Precio", "Costo", "Stock", "Categoria", "Tipo", "Codigo Barras"})
+	writer.Write([]string{"ID", "Nombre", "SKU", "Descripción", "Precio", "Costo", "Costo Unitario", "Stock", "Categoria", "Tipo", "Codigo Barras", "Codigo Barras Secundario", "Ubicacion", "Ubicacion Especifica", "Imagen URL", "Fecha Registro"})
 
 	for rows.Next() {
-		var id, nombre, categoria, tipo, codigo string
-		var precio, costo float64
+		var id, nombre, sku, categoria, tipo string
+		var descripcion, codBarras, codBarrasSec, ubicacion, ubiEspecifica, imagenUrl sql.NullString
+		var precio, costo, costoUnitario float64
 		var stock int
-		rows.Scan(&id, &nombre, &precio, &costo, &stock, &categoria, &tipo, &codigo)
+		var createdAt time.Time
+		err := rows.Scan(&id, &nombre, &sku, &descripcion, &precio, &costo, &costoUnitario, &stock, &categoria, &tipo, &codBarras, &codBarrasSec, &ubicacion, &ubiEspecifica, &imagenUrl, &createdAt)
+		if err != nil {
+			errorResponse(w, http.StatusInternalServerError, "Error al leer fila de producto: "+err.Error())
+			return
+		}
 		writer.Write([]string{
-			id, nombre, fmt.Sprintf("%.2f", precio), fmt.Sprintf("%.2f", costo),
-			fmt.Sprintf("%d", stock), categoria, tipo, codigo,
+			id, nombre, sku, descripcion.String, fmt.Sprintf("%.2f", precio), fmt.Sprintf("%.2f", costo),
+			fmt.Sprintf("%.2f", costoUnitario), fmt.Sprintf("%d", stock), categoria, tipo,
+			codBarras.String, codBarrasSec.String, ubicacion.String, ubiEspecifica.String, imagenUrl.String,
+			createdAt.Format("2006-01-02 15:04:05"),
 		})
 	}
 }

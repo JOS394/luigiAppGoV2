@@ -20,7 +20,7 @@ type ProductHandler struct {
 
 func (h *ProductHandler) GetProductos(w http.ResponseWriter, r *http.Request) {
 	// 1. Ejecutar la consulta SQL (Solo los no eliminados)
-	query := `SELECT id, nombre, precio, costo, costo_unitario, stock, sku, categoria, tipo, codigo_barras, codigo_barras_secundario, ubicacion, ubicacion_especifica, imagen_url, created_at, updated_at, deleted_at FROM productos WHERE deleted_at IS NULL`
+	query := `SELECT id, nombre, precio, costo, costo_unitario, stock, sku, descripcion, categoria, tipo, codigo_barras, codigo_barras_secundario, ubicacion, ubicacion_especifica, imagen_url, created_at, updated_at, deleted_at FROM productos WHERE deleted_at IS NULL`
 	rows, err := h.DB.Query(query)
 	if err != nil {
 		slog.Error("Error al consultar productos", "error", err)
@@ -35,12 +35,12 @@ func (h *ProductHandler) GetProductos(w http.ResponseWriter, r *http.Request) {
 	// 3. Iterar sobre las filas
 	for rows.Next() {
 		var p models.Producto
-		var id, nombre, sku, categoria, tipo, codigoBarras, codigoBarrasSecundario, ubicacion, ubiEspe, img sql.NullString
+		var id, nombre, sku, descripcion, categoria, tipo, codigoBarras, codigoBarrasSecundario, ubicacion, ubiEspe, img sql.NullString
 		var precio, costo, costoU sql.NullFloat64
 		var stock sql.NullInt64
 		var created, updated, deleted sql.NullTime
 
-		err := rows.Scan(&id, &nombre, &precio, &costo, &costoU, &stock, &sku, &categoria, &tipo, &codigoBarras, &codigoBarrasSecundario, &ubicacion, &ubiEspe, &img, &created, &updated, &deleted)
+		err := rows.Scan(&id, &nombre, &precio, &costo, &costoU, &stock, &sku, &descripcion, &categoria, &tipo, &codigoBarras, &codigoBarrasSecundario, &ubicacion, &ubiEspe, &img, &created, &updated, &deleted)
 		if err != nil {
 			slog.Error("Error scanneando fila de producto", "error", err)
 			continue
@@ -53,6 +53,9 @@ func (h *ProductHandler) GetProductos(w http.ResponseWriter, r *http.Request) {
 		p.CostoUnitario = costoU.Float64
 		p.Stock = int(stock.Int64)
 		p.SKU = sku.String
+		if descripcion.Valid {
+			p.Descripcion = &descripcion.String
+		}
 		if categoria.Valid {
 			p.Categoria = &categoria.String
 		}
@@ -119,8 +122,8 @@ func (h *ProductHandler) CreateProducto(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// 2. Insertar (SQL)
-	query := `INSERT INTO productos (id, nombre, precio, costo, costo_unitario, stock, sku, categoria, tipo, codigo_barras, codigo_barras_secundario, ubicacion, ubicacion_especifica, imagen_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`
-	_, err = h.DB.Exec(query, p.ID, p.Nombre, p.Precio, p.Costo, p.CostoUnitario, p.Stock, p.SKU, p.Categoria, p.Tipo, p.CodigoBarras, p.CodigoBarrasSecundario, p.Ubicacion, p.UbicacionEspecifica, p.ImagenURL)
+	query := `INSERT INTO productos (id, nombre, precio, costo, costo_unitario, stock, sku, descripcion, categoria, tipo, codigo_barras, codigo_barras_secundario, ubicacion, ubicacion_especifica, imagen_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`
+	_, err = h.DB.Exec(query, p.ID, p.Nombre, p.Precio, p.Costo, p.CostoUnitario, p.Stock, p.SKU, p.Descripcion, p.Categoria, p.Tipo, p.CodigoBarras, p.CodigoBarrasSecundario, p.Ubicacion, p.UbicacionEspecifica, p.ImagenURL)
 
 	if err != nil {
 		slog.Error("Error al guardar producto", "error", err)
@@ -233,8 +236,8 @@ func (h *ProductHandler) UpdateProducto(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	query := `UPDATE productos SET nombre = $1, precio = $2, costo = $3, costo_unitario = $4, stock = $5, sku = $6, categoria = $7, tipo = $8, codigo_barras = $9, codigo_barras_secundario = $10, ubicacion = $11, ubicacion_especifica = $12, imagen_url = $13, updated_at = CURRENT_TIMESTAMP WHERE id = $14 AND deleted_at IS NULL`
-	_, err = h.DB.Exec(query, p.Nombre, p.Precio, p.Costo, p.CostoUnitario, p.Stock, p.SKU, p.Categoria, p.Tipo, p.CodigoBarras, p.CodigoBarrasSecundario, p.Ubicacion, p.UbicacionEspecifica, p.ImagenURL, id)
+	query := `UPDATE productos SET nombre = $1, precio = $2, costo = $3, costo_unitario = $4, stock = $5, sku = $6, descripcion = $7, categoria = $8, tipo = $9, codigo_barras = $10, codigo_barras_secundario = $11, ubicacion = $12, ubicacion_especifica = $13, imagen_url = $14, updated_at = CURRENT_TIMESTAMP WHERE id = $15 AND deleted_at IS NULL`
+	_, err = h.DB.Exec(query, p.Nombre, p.Precio, p.Costo, p.CostoUnitario, p.Stock, p.SKU, p.Descripcion, p.Categoria, p.Tipo, p.CodigoBarras, p.CodigoBarrasSecundario, p.Ubicacion, p.UbicacionEspecifica, p.ImagenURL, id)
 	if err != nil {
 		slog.Error("Error al actualizar producto", "error", err)
 		errorResponse(w, http.StatusInternalServerError, "Error al actualizar producto: "+err.Error())
