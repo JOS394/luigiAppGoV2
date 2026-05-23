@@ -33,6 +33,7 @@ backend/bin/
 # Go Tooling
 __debug_bin
 /vendor/
+backend/uploads/
 
 # Environment Variables
 .env

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { X, Save, PlusCircle, MinusCircle, Info } from 'lucide-react';
+import { toast } from 'sonner';
 import type { Producto } from '@/types';
 
 interface StockAdjustmentModalProps {
@@ -20,7 +21,23 @@ export function StockAdjustmentModal({ show, onClose, producto, onSubmit }: Stoc
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cantidad || !motivo || !producto) return;
+    if (!producto) return;
+    
+    if (!cantidad) {
+      toast.error('Por favor, ingresa la cantidad a ajustar');
+      return;
+    }
+    
+    if (!motivo) {
+      toast.error('Por favor, selecciona un motivo para el ajuste');
+      return;
+    }
+    
+    if (stockNuevo < 0) {
+      toast.error('Operación inválida: El stock resultante no puede ser menor a 0');
+      return;
+    }
+
     onSubmit({
       productoId: producto.id,
       cantidad: parseInt(cantidad),
@@ -31,7 +48,7 @@ export function StockAdjustmentModal({ show, onClose, producto, onSubmit }: Stoc
     setMotivo('');
   };
 
-  const stockNuevo = tipo === 'Entrada' 
+  const stockNuevo = tipo === 'Entrada'
     ? producto.stock + (parseInt(cantidad) || 0)
     : producto.stock - (parseInt(cantidad) || 0);
 
@@ -51,20 +68,20 @@ export function StockAdjustmentModal({ show, onClose, producto, onSubmit }: Stoc
                 </p>
               </div>
             </div>
-            <button type="button" onClick={onClose} className="btn btn-ghost btn-sm btn-square text-slate-400"><X size={20}/></button>
+            <button type="button" onClick={onClose} className="btn btn-ghost btn-sm btn-square text-slate-400"><X size={20} /></button>
           </div>
 
           <div className="p-8 space-y-6 bg-white">
             {/* Selector de Tipo */}
             <div className="grid grid-cols-2 gap-3">
-              <button 
+              <button
                 type="button"
                 onClick={() => setTipo('Entrada')}
                 className={`btn btn-md rounded-xl gap-2 border-none ${tipo === 'Entrada' ? 'bg-primary text-white hover:bg-primary/90' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
               >
                 <PlusCircle size={18} /> Entrada
               </button>
-              <button 
+              <button
                 type="button"
                 onClick={() => setTipo('Salida')}
                 className={`btn btn-md rounded-xl gap-2 border-none ${tipo === 'Salida' ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
@@ -80,12 +97,12 @@ export function StockAdjustmentModal({ show, onClose, producto, onSubmit }: Stoc
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 text-primary">Cantidad a Ajustar</label>
-                <input 
-                  type="number" 
-                  required 
+                <input
+                  type="number"
+                  required
                   min="1"
-                  placeholder="0" 
-                  className="input input-bordered w-full bg-slate-50 focus:border-primary font-bold text-slate-700" 
+                  placeholder="0"
+                  className="input input-bordered w-full bg-slate-50 focus:border-primary font-bold text-slate-700"
                   value={cantidad}
                   onChange={e => setCantidad(e.target.value)}
                 />
@@ -94,7 +111,7 @@ export function StockAdjustmentModal({ show, onClose, producto, onSubmit }: Stoc
 
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Motivo del Ajuste</label>
-              <select 
+              <select
                 required
                 className="select select-bordered w-full bg-slate-50 font-bold text-slate-700"
                 value={motivo}
@@ -119,10 +136,9 @@ export function StockAdjustmentModal({ show, onClose, producto, onSubmit }: Stoc
 
           <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex gap-3 justify-end shrink-0">
             <button type="button" onClick={onClose} className="btn btn-ghost px-8 rounded-xl font-bold text-slate-400">Cancelar</button>
-            <button 
-              type="submit" 
-              disabled={stockNuevo < 0 || !cantidad || !motivo}
-              className="btn btn-primary px-10 rounded-xl font-bold text-white gap-2 shadow-lg shadow-primary/20"
+            <button
+              type="submit"
+              className="btn btn-primary px-10 rounded-xl font-bold text-white gap-2 shadow-lg shadow-primary/20 hover:bg-primary/95"
             >
               <Save size={18} /> Confirmar Ajuste
             </button>

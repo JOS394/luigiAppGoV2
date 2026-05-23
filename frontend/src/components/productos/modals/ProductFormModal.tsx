@@ -181,10 +181,20 @@ export function ProductFormModal({
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Stock Inicial *</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                  {initialData ? 'Stock Actual' : 'Stock Inicial *'}
+                </label>
                 <div className="relative">
                   <Boxes className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
-                  <input type="number" required placeholder="0" className="input input-bordered w-full pl-10 bg-slate-50 focus:border-primary font-bold text-slate-700 h-12" value={formData.stock} onChange={e => setFormData({ ...formData, stock: e.target.value })} />
+                  <input 
+                    type="number" 
+                    required 
+                    placeholder="0" 
+                    className="input input-bordered w-full pl-10 bg-slate-50 focus:border-primary font-bold text-slate-700 h-12 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 cursor-not-allowed" 
+                    disabled={!!initialData}
+                    value={formData.stock} 
+                    onChange={e => setFormData({ ...formData, stock: e.target.value })} 
+                  />
                 </div>
               </div>
 
