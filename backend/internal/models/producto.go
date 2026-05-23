@@ -11,9 +11,11 @@ type Producto struct {
 	Costo               float64    `json:"costo" validate:"required"`
 	CostoUnitario       float64    `json:"costo_unitario" validate:"required"`
 	Stock               int        `json:"stock" validate:"required"`
+	SKU                 string     `json:"sku" validate:"required"`
 	Categoria           *string    `json:"categoria"`
 	Tipo                *string    `json:"tipo"`
 	CodigoBarras        *string    `json:"codigo_barras"`
+	CodigoBarrasSecundario *string `json:"codigo_barras_secundario"`
 	Ubicacion           *string    `json:"ubicacion"`
 	UbicacionEspecifica *string    `json:"ubicacion_especifica"`
 	ImagenURL           *string    `json:"imagen_url"`

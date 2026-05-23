@@ -30,10 +30,14 @@ export interface Producto {
   id: string;
   nombre: string;
   precio: number;
+  costo?: number;
+  costoUnitario?: number;
   stock: number;
+  sku?: string;
   categoria: string;
   tipo: 'producto' | 'servicio';
   codigoBarras?: string;
+  codigoBarrasSecundario?: string;
   imagen?: string;
   descripcion?: string; // Detalle ampliado del producto o servicio
   ubicacion?: string; // Ej: Bodega, Tienda

@@ -97,10 +97,14 @@ const mapProductoFromBackend = (p: any): Producto => {
     id: id,
     nombre: p.nombre,
     precio: p.precio,
+    costo: p.costo,
+    costoUnitario: p.costo_unitario,
     stock: p.stock,
+    sku: p.sku,
     categoria: p.categoria || 'General',
     tipo: p.tipo as 'producto' | 'servicio',
     codigoBarras: p.codigo_barras,
+    codigoBarrasSecundario: p.codigo_barras_secundario,
     imagen: p.imagen_url ? (p.imagen_url.startsWith('http') ? p.imagen_url : `http://localhost:8080${p.imagen_url}`) : undefined,
     ubicacion: p.ubicacion,
     ubicacionEspecifica: p.ubicacion_especifica,
@@ -116,11 +120,14 @@ const mapProductoToBackend = (p: any) => ({
   costo: p.costo || 0,
   costo_unitario: p.costoUnitario || 0,
   stock: p.stock,
+  sku: p.sku || '',
   categoria: p.categoria,
   tipo: p.tipo,
-  codigo_barras: p.codigoBarras,
+  codigo_barras: p.codigoBarras || '',
+  codigo_barras_secundario: p.codigoBarrasSecundario || '',
   ubicacion: p.ubicacion,
   ubicacion_especifica: p.ubicacionEspecifica,
+  imagen_url: p.imagen && !p.imagen.startsWith('data:image/') ? p.imagen.replace('http://localhost:8080', '') : '',
 });
 
 const mapVentaFromBackend = (v: any): Venta => ({
@@ -378,6 +385,40 @@ export const apiService = {
     },
     getAlertas: async (): Promise<any[]> => {
       return await fetcher('/productos/alertas');
+    },
+    uploadImagen: async (id: string, base64Image: string): Promise<{ url: string }> => {
+      const arr = base64Image.split(',');
+      const mimeMatch = arr[0].match(/:(.*?);/);
+      if (!mimeMatch) throw new Error("Formato de imagen inválido");
+      const mime = mimeMatch[1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      const extension = mime.split('/')[1] || 'png';
+      const file = new File([u8arr], `imagen.${extension}`, { type: mime });
+
+      const formData = new FormData();
+      formData.append('imagen', file);
+
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      
+      const response = await fetch(`http://localhost:8080/api/productos/${id}/upload`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Error al subir la imagen');
+      }
+
+      return await response.json();
     }
   },
   clientes: {

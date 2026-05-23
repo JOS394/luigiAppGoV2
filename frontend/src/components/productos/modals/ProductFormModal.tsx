@@ -19,12 +19,32 @@ export function ProductFormModal({
   title, 
   initialData 
 }: ProductFormModalProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    nombre: string;
+    sku: string;
+    precio: string;
+    costo: string;
+    costoUnitario: string;
+    stock: string;
+    categoria: string;
+    tipo: 'producto' | 'servicio';
+    codigoBarras: string;
+    codigoBarrasSecundario: string;
+    ubicacion: string;
+    ubicacionEspecifica: string;
+    imagen: string;
+    descripcion: string;
+  }>({
     nombre: '',
+    sku: '',
     precio: '',
+    costo: '',
+    costoUnitario: '',
     stock: '',
     categoria: 'General',
-    tipo: 'producto' as const,
+    tipo: 'producto',
+    codigoBarras: '',
+    codigoBarrasSecundario: '',
     ubicacion: '',
     ubicacionEspecifica: '',
     imagen: '',
@@ -35,10 +55,15 @@ export function ProductFormModal({
     if (initialData) {
       setFormData({
         nombre: initialData.nombre,
+        sku: initialData.sku || '',
         precio: initialData.precio.toString(),
+        costo: (initialData.costo ?? 0).toString(),
+        costoUnitario: (initialData.costoUnitario ?? 0).toString(),
         stock: initialData.stock.toString(),
         categoria: initialData.categoria,
         tipo: initialData.tipo,
+        codigoBarras: initialData.codigoBarras || '',
+        codigoBarrasSecundario: initialData.codigoBarrasSecundario || '',
         ubicacion: initialData.ubicacion || '',
         ubicacionEspecifica: initialData.ubicacionEspecifica || '',
         imagen: initialData.imagen || '',
@@ -46,8 +71,8 @@ export function ProductFormModal({
       });
     } else {
       setFormData({
-        nombre: '', precio: '', stock: '', categoria: 'General', 
-        tipo: 'producto', ubicacion: '', ubicacionEspecifica: '', imagen: '',
+        nombre: '', sku: '', precio: '', costo: '', costoUnitario: '', stock: '', categoria: 'General', 
+        tipo: 'producto', codigoBarras: '', codigoBarrasSecundario: '', ubicacion: '', ubicacionEspecifica: '', imagen: '',
         descripcion: ''
       });
     }
@@ -59,8 +84,10 @@ export function ProductFormModal({
     e.preventDefault();
     onSubmit({
       ...formData,
-      precio: parseFloat(formData.precio),
-      stock: parseInt(formData.stock),
+      precio: parseFloat(formData.precio) || 0,
+      costo: parseFloat(formData.costo) || 0,
+      costoUnitario: parseFloat(formData.costoUnitario) || 0,
+      stock: parseInt(formData.stock) || 0,
     });
   };
 
@@ -79,8 +106,8 @@ export function ProductFormModal({
 
   return (
     <div className="modal modal-open">
-      <div className="modal-box bg-white max-w-2xl p-0 overflow-hidden rounded-2xl shadow-2xl border border-slate-100 h-full max-h-[90vh] md:h-auto">
-        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+      <div className="modal-box bg-white max-w-2xl p-0 overflow-hidden rounded-2xl shadow-2xl border border-slate-100 max-h-[90vh] md:max-h-[85vh] flex flex-col">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 sticky top-0 z-10">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary shadow-inner">
@@ -114,9 +141,14 @@ export function ProductFormModal({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2 space-y-2">
+              <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre del Producto *</label>
                 <input type="text" required placeholder="Ej. Cuaderno Profesional" className="input input-bordered w-full bg-slate-50 focus:border-primary font-bold text-slate-700 h-12" value={formData.nombre} onChange={e => setFormData({ ...formData, nombre: e.target.value })} />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">SKU *</label>
+                <input type="text" required placeholder="Ej. PROD-10293" className="input input-bordered w-full bg-slate-50 focus:border-primary font-bold text-slate-700 h-12" value={formData.sku} onChange={e => setFormData({ ...formData, sku: e.target.value })} />
               </div>
 
               <div className="md:col-span-2 space-y-2">
@@ -125,10 +157,34 @@ export function ProductFormModal({
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Precio Venta ($)</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Costo ($) *</label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
+                  <input type="number" step="0.01" required placeholder="0.00" className="input input-bordered w-full pl-10 bg-slate-50 focus:border-primary font-bold text-slate-700 h-12" value={formData.costo} onChange={e => setFormData({ ...formData, costo: e.target.value })} />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Costo Unitario ($) *</label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
+                  <input type="number" step="0.01" required placeholder="0.00" className="input input-bordered w-full pl-10 bg-slate-50 focus:border-primary font-bold text-slate-700 h-12" value={formData.costoUnitario} onChange={e => setFormData({ ...formData, costoUnitario: e.target.value })} />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Precio Venta ($) *</label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
                   <input type="number" step="0.01" required placeholder="0.00" className="input input-bordered w-full pl-10 bg-slate-50 focus:border-primary font-bold text-slate-700 h-12" value={formData.precio} onChange={e => setFormData({ ...formData, precio: e.target.value })} />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Stock Inicial *</label>
+                <div className="relative">
+                  <Boxes className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
+                  <input type="number" required placeholder="0" className="input input-bordered w-full pl-10 bg-slate-50 focus:border-primary font-bold text-slate-700 h-12" value={formData.stock} onChange={e => setFormData({ ...formData, stock: e.target.value })} />
                 </div>
               </div>
 
@@ -138,6 +194,24 @@ export function ProductFormModal({
                   <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
                   <input type="text" placeholder="Papelería, Oficina..." className="input input-bordered w-full pl-10 bg-slate-50 focus:border-primary font-bold text-slate-700 h-12" value={formData.categoria} onChange={e => setFormData({ ...formData, categoria: e.target.value })} />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tipo *</label>
+                <select className="select select-bordered w-full bg-slate-50 font-bold text-slate-700 h-12" value={formData.tipo} onChange={e => setFormData({...formData, tipo: e.target.value as 'producto' | 'servicio'})}>
+                  <option value="producto">Producto</option>
+                  <option value="servicio">Servicio</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Código de Barras</label>
+                <input type="text" placeholder="Ej. 7501234567890" className="input input-bordered w-full bg-slate-50 focus:border-primary font-bold text-slate-700 h-12" value={formData.codigoBarras} onChange={e => setFormData({ ...formData, codigoBarras: e.target.value })} />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Código de Barras Secundario</label>
+                <input type="text" placeholder="Código alternativo" className="input input-bordered w-full bg-slate-50 focus:border-primary font-bold text-slate-700 h-12" value={formData.codigoBarrasSecundario} onChange={e => setFormData({ ...formData, codigoBarrasSecundario: e.target.value })} />
               </div>
 
               <div className="md:col-span-2 pt-4 border-t border-slate-100">

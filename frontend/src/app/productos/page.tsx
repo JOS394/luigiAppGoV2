@@ -15,6 +15,7 @@ import { ProductFilterModal } from '@/components/productos/modals/ProductFilterM
 import { ExportModal } from '@/components/clientes/modals/ExportModal';
 import { ImportModal } from '@/components/clientes/modals/ImportModal';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { StockAdjustmentModal } from '@/components/inventario/modals/StockAdjustmentModal';
 
 export default function ProductosPage() {
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -29,6 +30,7 @@ export default function ProductosPage() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
   const [selectedProducto, setSelectedProducto] = useState<Producto | null>(null);
 
   // Filtros
@@ -55,13 +57,19 @@ export default function ProductosPage() {
     fetchData();
   }, []);
 
-  const handleSaveProduct = async (data: Omit<Producto, 'id'>) => {
+  const handleSaveProduct = async (data: Omit<Producto, 'id'> & { imagen?: string }) => {
     try {
       if (selectedProducto) {
         await apiService.productos.update(selectedProducto.id, data);
+        if (data.imagen && data.imagen.startsWith('data:image/')) {
+          await apiService.productos.uploadImagen(selectedProducto.id, data.imagen);
+        }
         toast.success('Producto actualizado correctamente');
       } else {
-        await apiService.productos.create(data);
+        const nuevo = await apiService.productos.create(data);
+        if (data.imagen && data.imagen.startsWith('data:image/')) {
+          await apiService.productos.uploadImagen(nuevo.id, data.imagen);
+        }
         toast.success('Producto registrado exitosamente');
       }
       setShowFormModal(false);
@@ -80,6 +88,25 @@ export default function ProductosPage() {
       fetchData();
     } catch (error) {
       toast.error('Error al eliminar producto');
+    }
+  };
+
+  const handleAdjustStock = async (data: { productoId: string, cantidad: number, tipo: 'Entrada' | 'Salida', motivo: string }) => {
+    const finalId = data.productoId || selectedProducto?.id;
+    if (!finalId) {
+      toast.error('Error: No hay un producto seleccionado para ajustar');
+      return;
+    }
+    try {
+      await apiService.inventario.ajustarStock({
+        ...data,
+        productoId: finalId
+      });
+      toast.success('Ajuste de inventario aplicado');
+      setShowAdjustmentModal(false);
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.message || 'Error al ajustar stock');
     }
   };
 
@@ -197,6 +224,7 @@ export default function ProductosPage() {
         onOpenDetail={(p) => { setSelectedProducto(p); setShowDetailModal(true); }}
         onOpenEdit={(p) => { setSelectedProducto(p); setShowFormModal(true); }}
         onOpenDelete={(p) => { setSelectedProducto(p); setShowDeleteConfirm(true); }}
+        onOpenAdjustStock={(p) => { setSelectedProducto(p); setShowAdjustmentModal(true); }}
         viewMode={viewMode}
       />
 
@@ -237,6 +265,13 @@ export default function ProductosPage() {
         onClose={() => setShowImportModal(false)}
         onImport={(msg) => { toast.success(msg); setShowImportModal(false); }}
         title="Importar Productos"
+      />
+
+      <StockAdjustmentModal 
+        show={showAdjustmentModal}
+        onClose={() => setShowAdjustmentModal(false)}
+        producto={selectedProducto}
+        onSubmit={handleAdjustStock}
       />
 
       <ConfirmDialog 

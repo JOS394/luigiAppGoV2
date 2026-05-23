@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Package, Tag, Eye, Edit, Trash2, History, AlertCircle, MapPin } from 'lucide-react';
+import { Package, Tag, Eye, Edit, Trash2, History, AlertCircle, MapPin, ArrowUpDown } from 'lucide-react';
 import type { Producto } from '@/types';
 import { TableActions } from '../shared/TableActions';
 
@@ -10,6 +10,7 @@ interface ProductTableProps {
   onOpenDetail: (p: Producto) => void;
   onOpenEdit: (p: Producto) => void;
   onOpenDelete: (p: Producto) => void;
+  onOpenAdjustStock: (p: Producto) => void;
   viewMode?: 'grid' | 'table';
 }
 
@@ -18,6 +19,7 @@ export function ProductTable({
   onOpenDetail, 
   onOpenEdit, 
   onOpenDelete,
+  onOpenAdjustStock,
   viewMode = 'table'
 }: ProductTableProps) {
   return (
@@ -44,6 +46,7 @@ export function ProductTable({
                   actions={[
                     { label: 'Ver Detalles', icon: <Eye />, onClick: () => onOpenDetail(p) },
                     { label: 'Editar Producto', icon: <Edit />, onClick: () => onOpenEdit(p) },
+                    { label: 'Ajustar Stock', icon: <ArrowUpDown />, onClick: () => onOpenAdjustStock(p) },
                     { label: 'Eliminar', icon: <Trash2 />, onClick: () => onOpenDelete(p), variant: 'danger' },
                   ]}
                 />
@@ -98,7 +101,7 @@ export function ProductTable({
                         </div>
                         <div>
                           <div className="font-bold text-slate-700 uppercase tracking-tight">{p.nombre}</div>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{p.codigoBarras || `SKU: ${p.id}`}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{p.codigoBarras || `SKU: ${p.sku || 'N/A'}`}</p>
                         </div>
                       </div>
                     </td>
@@ -133,6 +136,7 @@ export function ProductTable({
                         actions={[
                           { label: 'Ver Detalles', icon: <Eye />, onClick: () => onOpenDetail(p) },
                           { label: 'Editar Producto', icon: <Edit />, onClick: () => onOpenEdit(p) },
+                          { label: 'Ajustar Stock', icon: <ArrowUpDown />, onClick: () => onOpenAdjustStock(p) },
                           { label: 'SEPARATOR', icon: null, onClick: () => {} },
                           { label: 'Eliminar', icon: <Trash2 />, onClick: () => onOpenDelete(p), variant: 'danger' },
                         ]}

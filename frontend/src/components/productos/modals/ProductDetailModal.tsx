@@ -1,7 +1,7 @@
 "use client";
 
-import React from 'react';
-import { X, Package, Tag, DollarSign, Boxes, Edit, Trash2, MapPin } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Package, Tag, DollarSign, Boxes, Edit, Trash2, MapPin, ZoomIn } from 'lucide-react';
 import type { Producto } from '@/types';
 
 interface ProductDetailModalProps {
@@ -13,6 +13,8 @@ interface ProductDetailModalProps {
 }
 
 export function ProductDetailModal({ show, onClose, producto, onEdit, onDelete }: ProductDetailModalProps) {
+  const [showZoom, setShowZoom] = useState(false);
+
   if (!show || !producto) return null;
 
   return (
@@ -21,9 +23,17 @@ export function ProductDetailModal({ show, onClose, producto, onEdit, onDelete }
         <div className="bg-slate-800 px-8 py-10 text-white relative">
           <button onClick={onClose} className="absolute top-4 right-4 text-white/60 hover:text-white"><X size={20}/></button>
           <div className="flex items-center gap-6">
-            <div className="w-24 h-24 bg-white/10 backdrop-blur-md rounded-3xl overflow-hidden flex items-center justify-center border border-white/10 shadow-inner">
+            <div 
+              className={`w-24 h-24 bg-white/10 backdrop-blur-md rounded-3xl overflow-hidden flex items-center justify-center border border-white/10 shadow-inner relative group ${producto.imagen ? 'cursor-zoom-in' : ''}`}
+              onClick={() => producto.imagen && setShowZoom(true)}
+            >
               {producto.imagen ? (
-                <img src={producto.imagen} alt={producto.nombre} className="w-full h-full object-cover" />
+                <>
+                  <img src={producto.imagen} alt={producto.nombre} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300">
+                    <ZoomIn size={20} className="text-white" />
+                  </div>
+                </>
               ) : (
                 <Package size={40} className="text-primary" />
               )}
@@ -31,7 +41,7 @@ export function ProductDetailModal({ show, onClose, producto, onEdit, onDelete }
             <div>
               <h3 className="text-3xl font-black uppercase tracking-tighter italic">{producto.nombre}</h3>
               <div className="flex gap-4 mt-2">
-                <span className="text-[10px] font-bold uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full">SKU: {producto.id}</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full">SKU: {producto.sku || 'N/A'}</span>
                 <span className="text-[10px] font-bold uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full flex items-center gap-1.5 capitalize">
                   {producto.tipo}
                 </span>
@@ -111,6 +121,31 @@ export function ProductDetailModal({ show, onClose, producto, onEdit, onDelete }
         </div>
       </div>
       <div className="modal-backdrop bg-neutral/20 backdrop-blur-sm" onClick={onClose}></div>
+
+      {/* Lightbox / Zoom de Imagen */}
+      {showZoom && producto.imagen && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-300"
+          onClick={() => setShowZoom(false)}
+        >
+          <button 
+            onClick={() => setShowZoom(false)} 
+            className="absolute top-6 right-6 btn btn-circle btn-ghost text-white/70 hover:text-white hover:bg-white/10 bg-black/40"
+          >
+            <X size={24} />
+          </button>
+          <div className="max-w-[90vw] max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl border border-white/10 relative p-2" onClick={e => e.stopPropagation()}>
+            <img 
+              src={producto.imagen} 
+              alt={producto.nombre} 
+              className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl animate-in zoom-in-95 duration-300"
+            />
+            <div className="absolute bottom-4 left-4 right-4 bg-black/60 backdrop-blur-md text-white/95 px-4 py-2.5 rounded-xl border border-white/10 text-center">
+              <p className="text-sm font-black uppercase tracking-wider">{producto.nombre}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

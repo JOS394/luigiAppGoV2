@@ -74,9 +74,9 @@ export function StockAdjustmentModal({ show, onClose, producto, onSubmit }: Stoc
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+              <div className="space-y-2 flex flex-col justify-center">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Stock Actual</label>
-                <div className="input input-bordered w-full bg-slate-50 flex items-center font-bold text-slate-400">{producto.stock} unid.</div>
+                <div className="text-2xl font-black text-slate-800 ml-1 h-12 flex items-center">{producto.stock} <span className="text-xs font-bold text-slate-400 ml-1">unid.</span></div>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 text-primary">Cantidad a Ajustar</label>

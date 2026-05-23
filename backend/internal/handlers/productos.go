@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -19,9 +20,10 @@ type ProductHandler struct {
 
 func (h *ProductHandler) GetProductos(w http.ResponseWriter, r *http.Request) {
 	// 1. Ejecutar la consulta SQL (Solo los no eliminados)
-	query := `SELECT id, nombre, precio, costo, costo_unitario, stock, categoria, tipo, codigo_barras, ubicacion, ubicacion_especifica, imagen_url, created_at, updated_at, deleted_at FROM productos WHERE deleted_at IS NULL`
+	query := `SELECT id, nombre, precio, costo, costo_unitario, stock, sku, categoria, tipo, codigo_barras, codigo_barras_secundario, ubicacion, ubicacion_especifica, imagen_url, created_at, updated_at, deleted_at FROM productos WHERE deleted_at IS NULL`
 	rows, err := h.DB.Query(query)
 	if err != nil {
+		slog.Error("Error al consultar productos", "error", err)
 		errorResponse(w, http.StatusInternalServerError, "Error al consultar productos: "+err.Error())
 		return
 	}
@@ -33,14 +35,14 @@ func (h *ProductHandler) GetProductos(w http.ResponseWriter, r *http.Request) {
 	// 3. Iterar sobre las filas
 	for rows.Next() {
 		var p models.Producto
-		var id, nombre, categoria, tipo, codigoBarras, ubicacion, ubiEspe, img sql.NullString
+		var id, nombre, sku, categoria, tipo, codigoBarras, codigoBarrasSecundario, ubicacion, ubiEspe, img sql.NullString
 		var precio, costo, costoU sql.NullFloat64
 		var stock sql.NullInt64
 		var created, updated, deleted sql.NullTime
 
-		err := rows.Scan(&id, &nombre, &precio, &costo, &costoU, &stock, &categoria, &tipo, &codigoBarras, &ubicacion, &ubiEspe, &img, &created, &updated, &deleted)
+		err := rows.Scan(&id, &nombre, &precio, &costo, &costoU, &stock, &sku, &categoria, &tipo, &codigoBarras, &codigoBarrasSecundario, &ubicacion, &ubiEspe, &img, &created, &updated, &deleted)
 		if err != nil {
-			log.Printf("❌ Error scanneando fila: %v", err)
+			slog.Error("Error scanneando fila de producto", "error", err)
 			continue
 		}
 
@@ -50,6 +52,7 @@ func (h *ProductHandler) GetProductos(w http.ResponseWriter, r *http.Request) {
 		p.Costo = costo.Float64
 		p.CostoUnitario = costoU.Float64
 		p.Stock = int(stock.Int64)
+		p.SKU = sku.String
 		if categoria.Valid {
 			p.Categoria = &categoria.String
 		}
@@ -58,6 +61,9 @@ func (h *ProductHandler) GetProductos(w http.ResponseWriter, r *http.Request) {
 		}
 		if codigoBarras.Valid {
 			p.CodigoBarras = &codigoBarras.String
+		}
+		if codigoBarrasSecundario.Valid {
+			p.CodigoBarrasSecundario = &codigoBarrasSecundario.String
 		}
 		if ubicacion.Valid {
 			p.Ubicacion = &ubicacion.String
@@ -82,7 +88,7 @@ func (h *ProductHandler) GetProductos(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 4. Responder con el JSON
-	log.Printf("📦 Enviando %d productos al frontend", len(productos))
+	slog.Info("Enviando productos al frontend", "cantidad", len(productos))
 	jsonResponse(w, http.StatusOK, productos)
 }
 
@@ -99,18 +105,31 @@ func (h *ProductHandler) CreateProducto(w http.ResponseWriter, r *http.Request) 
 		p.ID = uuid.New().String()
 	}
 
+	// Validación previa: verificar SKU
+	var exists bool
+	err := h.DB.QueryRow(`SELECT EXISTS(SELECT 1 FROM productos WHERE sku = $1 AND deleted_at IS NULL)`, p.SKU).Scan(&exists)
+	if err != nil {
+		slog.Error("Error al verificar SKU existente", "error", err)
+		errorResponse(w, http.StatusInternalServerError, "Error al verificar SKU en la base de datos")
+		return
+	}
+	if exists {
+		errorResponse(w, http.StatusBadRequest, "El SKU ya existe")
+		return
+	}
+
 	// 2. Insertar (SQL)
-	query := `INSERT INTO productos (id, nombre, precio, costo, costo_unitario, stock, categoria, tipo, codigo_barras, ubicacion, ubicacion_especifica, imagen_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
-	_, err := h.DB.Exec(query, p.ID, p.Nombre, p.Precio, p.Costo, p.CostoUnitario, p.Stock, p.Categoria, p.Tipo, p.CodigoBarras, p.Ubicacion, p.UbicacionEspecifica, p.ImagenURL)
+	query := `INSERT INTO productos (id, nombre, precio, costo, costo_unitario, stock, sku, categoria, tipo, codigo_barras, codigo_barras_secundario, ubicacion, ubicacion_especifica, imagen_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`
+	_, err = h.DB.Exec(query, p.ID, p.Nombre, p.Precio, p.Costo, p.CostoUnitario, p.Stock, p.SKU, p.Categoria, p.Tipo, p.CodigoBarras, p.CodigoBarrasSecundario, p.Ubicacion, p.UbicacionEspecifica, p.ImagenURL)
 
 	if err != nil {
-		// Si el error es porque el ID ya existe
+		slog.Error("Error al guardar producto", "error", err)
 		errorResponse(w, http.StatusInternalServerError, "No se pudo guardar: "+err.Error())
 		return
 	}
 
 	// 3. Responder con éxito
-	jsonResponse(w, http.StatusCreated, map[string]string{"message": "Producto creado con éxito"})
+	jsonResponse(w, http.StatusCreated, p)
 }
 
 func (h *ProductHandler) UploadImagen(w http.ResponseWriter, r *http.Request) {
@@ -130,6 +149,23 @@ func (h *ProductHandler) UploadImagen(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
+	// Validar el tipo de archivo (Seguridad)
+	buff := make([]byte, 512)
+	if _, err := file.Read(buff); err != nil {
+		errorResponse(w, http.StatusInternalServerError, "Error al leer el archivo para validación: "+err.Error())
+		return
+	}
+	if _, err := file.Seek(0, 0); err != nil {
+		errorResponse(w, http.StatusInternalServerError, "Error al reposicionar el lector del archivo: "+err.Error())
+		return
+	}
+
+	contentType := http.DetectContentType(buff)
+	if contentType != "image/jpeg" && contentType != "image/png" {
+		errorResponse(w, http.StatusBadRequest, "Solo se permiten imágenes JPEG o PNG")
+		return
+	}
+
 	// 2. Crear el nombre del archivo (id_producto + extensión original)
 	ext := filepath.Ext(header.Filename)
 	filename := id + ext
@@ -137,6 +173,18 @@ func (h *ProductHandler) UploadImagen(w http.ResponseWriter, r *http.Request) {
 
 	// Asegurar que la carpeta existe
 	os.MkdirAll(uploadPath, os.ModePerm)
+
+	// Eliminar imagen anterior si existe para evitar archivos huérfanos
+	var oldImagenURL sql.NullString
+	err = h.DB.QueryRow("SELECT imagen_url FROM productos WHERE id = $1", id).Scan(&oldImagenURL)
+	if err == nil && oldImagenURL.Valid && oldImagenURL.String != "" {
+		oldPath := filepath.Join(uploadPath, filepath.Base(oldImagenURL.String))
+		if _, err := os.Stat(oldPath); err == nil {
+			if err := os.Remove(oldPath); err != nil {
+				log.Printf("⚠️ No se pudo eliminar la imagen anterior (%s): %v", oldPath, err)
+			}
+		}
+	}
 
 	fullPath := filepath.Join(uploadPath, filename)
 
@@ -172,14 +220,29 @@ func (h *ProductHandler) UpdateProducto(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	query := `UPDATE productos SET nombre = $1, precio = $2, costo = $3, costo_unitario = $4, stock = $5, categoria = $6, tipo = $7, codigo_barras = $8, ubicacion = $9, ubicacion_especifica = $10, updated_at = CURRENT_TIMESTAMP WHERE id = $11 AND deleted_at IS NULL`
-	_, err := h.DB.Exec(query, p.Nombre, p.Precio, p.Costo, p.CostoUnitario, p.Stock, p.Categoria, p.Tipo, p.CodigoBarras, p.Ubicacion, p.UbicacionEspecifica, id)
+	// Verificar SKU único en actualización
+	var exists bool
+	err := h.DB.QueryRow(`SELECT EXISTS(SELECT 1 FROM productos WHERE sku = $1 AND id != $2 AND deleted_at IS NULL)`, p.SKU, id).Scan(&exists)
 	if err != nil {
+		slog.Error("Error al verificar SKU existente en actualización", "error", err)
+		errorResponse(w, http.StatusInternalServerError, "Error al verificar SKU")
+		return
+	}
+	if exists {
+		errorResponse(w, http.StatusBadRequest, "El SKU ya existe")
+		return
+	}
+
+	query := `UPDATE productos SET nombre = $1, precio = $2, costo = $3, costo_unitario = $4, stock = $5, sku = $6, categoria = $7, tipo = $8, codigo_barras = $9, codigo_barras_secundario = $10, ubicacion = $11, ubicacion_especifica = $12, imagen_url = $13, updated_at = CURRENT_TIMESTAMP WHERE id = $14 AND deleted_at IS NULL`
+	_, err = h.DB.Exec(query, p.Nombre, p.Precio, p.Costo, p.CostoUnitario, p.Stock, p.SKU, p.Categoria, p.Tipo, p.CodigoBarras, p.CodigoBarrasSecundario, p.Ubicacion, p.UbicacionEspecifica, p.ImagenURL, id)
+	if err != nil {
+		slog.Error("Error al actualizar producto", "error", err)
 		errorResponse(w, http.StatusInternalServerError, "Error al actualizar producto: "+err.Error())
 		return
 	}
 
-	jsonResponse(w, http.StatusOK, map[string]string{"message": "Producto actualizado con éxito"})
+	p.ID = id
+	jsonResponse(w, http.StatusOK, p)
 }
 
 func (h *ProductHandler) GetAlertas(w http.ResponseWriter, r *http.Request) {
